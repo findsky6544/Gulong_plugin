@@ -1,0 +1,66 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <AssemblyName>Gulong_plugin</AssemblyName>
+    <Description>My first plugin</Description>
+    <Version>1.0.0</Version>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <LangVersion>latest</LangVersion>
+    <BaseOutputPath>bin\</BaseOutputPath>
+    <Product>古龙风云录插件 by 寻宇</Product>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BepInEx.Analyzers" Version="1.*" PrivateAssets="all" />
+    <PackageReference Include="BepInEx.Core" Version="5.*" />
+    <PackageReference Include="BepInEx.PluginInfoProps" Version="1.*" />
+    <PackageReference Include="UnityEngine.Modules" Version="2020.1.6" IncludeAssets="compile" />
+  </ItemGroup>
+  
+  <ItemGroup Condition="'$(TargetFramework.TrimEnd(`0123456789`))' == 'net'">
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.2" PrivateAssets="all" />
+  </ItemGroup>
+  
+  <ItemGroup>
+    <Reference Include="BehaviourMachine">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\BehaviourMachine.dll</HintPath>
+    </Reference>
+    <Reference Include="BehaviourMachineRuntime">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\BehaviourMachineRuntime.dll</HintPath>
+    </Reference>
+    <Reference Include="EcsRx">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.dll</HintPath>
+    </Reference>
+    <Reference Include="EcsRx.Infrastructure">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Infrastructure.dll</HintPath>
+    </Reference>
+    <Reference Include="EcsRx.Plugins.ReactiveSystems">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Plugins.ReactiveSystems.dll</HintPath>
+    </Reference>
+    <Reference Include="EcsRx.Plugins.Views">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Plugins.Views.dll</HintPath>
+    </Reference>
+    <Reference Include="EcsRx.Unity">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Unity.dll</HintPath>
+    </Reference>
+    <Reference Include="GuLong">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\GuLong.dll</HintPath>
+    </Reference>
+    <Reference Include="Ninject">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\Ninject.dll</HintPath>
+    </Reference>
+    <Reference Include="UniRx">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\UniRx.dll</HintPath>
+    </Reference>
+    <Reference Include="UniRx.Async">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\UniRx.Async.dll</HintPath>
+    </Reference>
+    <Reference Include="Unity.TextMeshPro">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\Unity.TextMeshPro.dll</HintPath>
+    </Reference>
+    <Reference Include="UnityEngine.UI">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\UnityEngine.UI.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+</Project>
