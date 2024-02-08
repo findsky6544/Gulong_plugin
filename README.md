@@ -31,4 +31,5 @@
 11.修改主角姓名
 
 12.增加技能栏位数
+
 ![QQ截图20240209013344](https://github.com/findsky6544/Gulong_plugin/assets/36687288/bf6c0498-bd1b-4a92-9c1c-ea52c2be3387)
