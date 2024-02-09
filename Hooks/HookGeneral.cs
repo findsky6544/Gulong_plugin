@@ -1,4 +1,6 @@
 ﻿using BepInEx.Configuration;
+using EcsRx.Collections.Entity;
+using EcsRx.Components;
 using EcsRx.Entities;
 using EcsRx.Extensions;
 using EcsRx.Unity.Extensions;
@@ -56,6 +58,7 @@ namespace PathOfWuxia
         static ConfigEntry<bool> unlimitRadarRange;
         static ConfigEntry<bool> showCoolDownTime;
         static ConfigEntry<bool> rightClickCloseUI;
+        static ConfigEntry<bool> TriggerPointAlwaysShow;
         static EventHandler ReplacePlayerAvatarEventHander;
 
         static bool speedOn = false;
@@ -69,12 +72,13 @@ namespace PathOfWuxia
             speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "开关速度调节");
             playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度");
             unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿.如果关闭后图标不消失可SL解决");
-            rightClickCloseUI = plugin.Config.Bind("游戏设定", "右键关闭UI界面", false, "右键关闭UI界面");
+            rightClickCloseUI = plugin.Config.Bind("UI增强", "右键关闭UI界面", false, "右键关闭UI界面");
             ShowRepluseTick = plugin.Config.Bind("UI增强", "显示时序数值", false, "战斗中显示时序数值");
             showGiftFavorite = plugin.Config.Bind("UI增强", "显示礼物喜爱度", false, "显示礼物喜爱度");
             playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
             playerName = plugin.Config.Bind("游戏设定", "主角名", "雨", "修改主角名");
             addskillColumnNum = plugin.Config.Bind("游戏设定", "增加技能栏位数", 0, "每人最多6个栏位，多了无效");
+            TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "所有物品常亮后靠的太近的两个物体可能会分不清正在调查哪个，请自行分辨");
             autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
             //modSupport = plugin.Config.Bind("mod支持", "mod支持", false, "mod支持");
             plugin.onUpdate += OnUpdate;
@@ -134,6 +138,7 @@ namespace PathOfWuxia
         }
 
         //修改大地图角色移动速度
+        //方向键移动
         [HarmonyPrefix, HarmonyPatch(typeof(WorldMapPlayerMoveSystem), "Move")]
         public static bool WorldMapPlayerMoveSystem_MovePatch_changePlayerMoveSpeed(WorldMapPlayerMoveSystem __instance)
         {
@@ -142,6 +147,7 @@ namespace PathOfWuxia
             return true;
         }
 
+        //点击物体移动
         [HarmonyPrefix, HarmonyPatch(typeof(WorldMapPlayerMoveSystem), "MoveTo", new Type[] { typeof(IEntity) })]
         public static bool WorldMapPlayerMoveSystem_MoveToPatch_changePlayerMoveSpeed(WorldMapPlayerMoveSystem __instance, ref IEntity target)
         {
@@ -221,7 +227,7 @@ namespace PathOfWuxia
                     DestinationId = target.Id,
                     Destination = item2,
                     Type = item,
-                    Speed = Convert.ToInt32(playerMoveSpeed.Value * 55.5)
+                    Speed = Convert.ToInt32(playerMoveSpeed.Value * 55.5)//主要就是改了这个
                 };
                 entity.AddComponent(component2);
                 IObjectPool<GameObject> pool = (IObjectPool<GameObject>)Traverse.Create(__instance).Field("pool").GetValue();
@@ -257,6 +263,7 @@ namespace PathOfWuxia
             return false;
         }
 
+        //点击坐标点移动
         [HarmonyPrefix, HarmonyPatch(typeof(WorldMapPlayerMoveSystem), "MoveTo", new Type[] { typeof(Vector3) })]
         public static bool WorldMapPlayerMoveSystem_MoveToPatch_changePlayerMoveSpeed2(WorldMapPlayerMoveSystem __instance, ref Vector3 point)
         {
@@ -297,7 +304,7 @@ namespace PathOfWuxia
             {
                 Destination = point,
                 Type = MoveType.NavMesh,
-                Speed = Convert.ToInt32(playerMoveSpeed.Value * 55.5)
+                Speed = Convert.ToInt32(playerMoveSpeed.Value * 55.5)//主要就是改了这个
             };
             entity.AddComponent(component);
             IObjectPool<GameObject> pool = (IObjectPool<GameObject>)Traverse.Create(__instance).Field("pool").GetValue();
@@ -359,6 +366,7 @@ namespace PathOfWuxia
                 {
                     Id = normalInventoryItem.Skill
                 });
+                //主要就是注释这句话
                 //(currentUseItem as WGLoopedGridItem<InventoryData>).GetComponentInParent<IMoveableInventory>().RemoveItem(currentUseItem.Value, 1);
                 IReusableEventSystem EventSystem = (IReusableEventSystem)Traverse.Create(__instance).Property("EventSystem").GetValue();
                 EventSystem.Publish<AudioEventArgs>(delegate (AudioEventArgs e)
@@ -378,7 +386,7 @@ namespace PathOfWuxia
                 return true;
             }
         }
-
+        //心法不吃书
         [HarmonyPrefix, HarmonyPatch(typeof(MovableItemUI), "UseHeartFormulaConfirm")]
         private static bool MovableItemUI_UseHeartFormulaConfirmPatch_UseBookNotDelete(MovableItemUI __instance)
         {
@@ -410,6 +418,7 @@ namespace PathOfWuxia
                 {
                 normalInventoryItem.Perception
                 });
+                //主要就是注释这句话
                 //(currentUseItem as WGLoopedGridItem<InventoryData>).GetComponentInParent<IMoveableInventory>().RemoveItem(currentUseItem.Value, 1);
                 IReusableEventSystem EventSystem = (IReusableEventSystem)Traverse.Create(__instance).Property("EventSystem").GetValue();
                 EventSystem.Publish<AudioEventArgs>(delegate (AudioEventArgs e)
@@ -446,6 +455,7 @@ namespace PathOfWuxia
                 BattleController Controller = (BattleController)Traverse.Create(__instance.fsm).Property("Controller").GetValue();
                 DataComponentSystem<NpcComponent, NpcItem> system = Game.World.GetSystem<NpcDataSystem>();
                 CharacterPropertyInfo characterPropertyInfo;
+                //主要就改了这里，把所有队友加入ids
                 foreach (string id in __instance.PartyCreationSystem.Player.Members)
                 {
                     characterPropertyInfo = new CharacterPropertyInfo(system[id]);
@@ -547,7 +557,7 @@ namespace PathOfWuxia
                 __result = 9999f;
             }
         }
-
+        //当大地图追踪图标位于窗口顶端时，将名字显示与图标下方
         [HarmonyPostfix, HarmonyPatch(typeof(PartyBillboardViewSystem), "Process")]
         public static void WgPartyBillboard_SetNamePatch_showNameAnywhere(WgPartyBillboard __instance, ref IEntity entity)
         {
@@ -579,6 +589,7 @@ namespace PathOfWuxia
 
 
         //右键关闭UI
+        //UIControllableForm添加右键关闭，这个是一些窗口的父类
         [HarmonyPostfix, HarmonyPatch(typeof(UIControllableForm), "MouseUpEvent")]
         public static void UIControllableForm_MouseUpEventPatch_rightClickCloseUI(UIControllableForm __instance, ref PointerEventData.InputButton btn)
         {
@@ -591,7 +602,7 @@ namespace PathOfWuxia
                 }
             }
         }
-
+        //技能界面添加右键关闭
         [HarmonyPostfix, HarmonyPatch(typeof(UISkillEnhance), "MouseUpEvent")]
         public static void UISkillEnhance_MouseUpEventPatch_rightClickCloseUI(UIControllableForm __instance, ref PointerEventData.InputButton btn)
         {
@@ -605,7 +616,7 @@ namespace PathOfWuxia
                 }
             }
         }
-
+        //物品界面添加右键关闭
         [HarmonyPrefix, HarmonyPatch(typeof(UIWarehouse), "MouseUpEvent")]
         public static bool UIWarehouse_MouseUpEventPatch_rightClickCloseUI(UIWarehouse __instance, ref PointerEventData.InputButton btn)
         {
@@ -656,7 +667,7 @@ namespace PathOfWuxia
             typeof(UIBackground)
         };
 
-
+        //基础UIForm添加右键关闭，上面这些窗口都继承该form
         [HarmonyPostfix, HarmonyPatch(typeof(UIForm), "Show")]
         public static void UIForm_showPatch_rightClickCloseUI(UIForm __instance)
         {
@@ -678,7 +689,7 @@ namespace PathOfWuxia
             }
         }
 
-
+        //支线任务界面添加右键关闭
         [HarmonyPostfix, HarmonyPatch(typeof(UIQuestBranch), "Show")]
         public static void UIQuestBranch_showPatch_rightClickCloseUI(UIQuestBranch __instance)
         {
@@ -688,7 +699,7 @@ namespace PathOfWuxia
                 AddRightClickCloseUIEvent(__instance.gameObject);
             }
         }
-
+        //添加右键关闭事件
         public static void AddRightClickCloseUIEvent(GameObject gameObject)
         {
             Console.WriteLine("UIForm_showPatch_rightClickCloseUI");
@@ -707,7 +718,7 @@ namespace PathOfWuxia
             }));
         }
 
-
+        //角色信息界面添加右键关闭
         [HarmonyPostfix, HarmonyPatch(typeof(WGUnitInfo), "MouseDown")]
         public static void WGUnitInfo_MouseDownPatch_rightClickCloseUI(WGUnitInfo __instance)
         {
@@ -735,7 +746,7 @@ namespace PathOfWuxia
             }
         }
 
-        //显示时序数值
+        //显示时序数值-加入新TimeEvent时
         [HarmonyPostfix, HarmonyPatch(typeof(WGTimeline), "OnTimeEventAdd", new Type[] { typeof(ITimedEvent), typeof(Dictionary<ITimedEvent, WGTimelineIcon>), typeof(bool) })]
         public static void WGTimeline_OnTimeEventAddPatch_ShowRepluseTick(WGTimeline __instance)
         {
@@ -743,6 +754,7 @@ namespace PathOfWuxia
             createRepluseTickText(__instance);
         }
 
+        //战斗序列更新时
         [HarmonyPostfix, HarmonyPatch(typeof(BattleSequencer), "Update")]
         public static void BattleSequencer_UpdatePatch_ShowRepluseTick(BattleSequencer __instance)
         {
@@ -752,7 +764,7 @@ namespace PathOfWuxia
             createRepluseTickText(wGTimeline);
         }
 
-
+        //为每一个头像创建时序text
         public static void createRepluseTickText(WGTimeline __instance)
         {
             List<ValueTuple<ITimedEvent, WGTimelineIcon>> TimelineQueue = Traverse.Create(__instance).Field("TimelineQueue").GetValue<List<ValueTuple<ITimedEvent, WGTimelineIcon>>>();
@@ -801,7 +813,7 @@ namespace PathOfWuxia
 
             }
         }
-
+        //显示礼物数值
         [HarmonyPostfix, HarmonyPatch(typeof(WGGiftTip), "<SetItemInfo>g__ApplyManorGiftExposeBuff|5_1")]
         public static void WGGiftTip_ApplyManorGiftExposeBuffPatch_showGiftFavorite(WGGiftTip __instance, ref bool __result)
         {
@@ -831,19 +843,29 @@ namespace PathOfWuxia
         {
             Console.WriteLine("ReplacePlayerAvatarData");
             NpcDataSystem system = Game.World.GetSystem<NpcDataSystem>();
-            NpcComponent component = system[Id].GetComponent<NpcComponent>();
-            AvatarItem overrideAvatar = component.OverrideAvatar;
-            if (overrideAvatar != null)
+            if(system != null)
             {
-                overrideAvatar.Surname = playerSurname.Value;
-                overrideAvatar.Name = playerName.Value;
-            }
-            else
-            {
-                if (component.Item != null && component.Item.Avatar != null)
+                IEntity entity = system[Id];
+                if (entity != null)
                 {
-                    component.Item.Avatar.Surname = playerSurname.Value;
-                    component.Item.Avatar.Name = playerName.Value;
+                    NpcComponent component = entity.GetComponent<NpcComponent>();
+                    if (component != null)
+                    {
+                        AvatarItem overrideAvatar = component.OverrideAvatar;
+                        if (overrideAvatar != null)
+                        {
+                            overrideAvatar.Surname = playerSurname.Value;
+                            overrideAvatar.Name = playerName.Value;
+                        }
+                        else
+                        {
+                            if (component.Item != null && component.Item.Avatar != null)
+                            {
+                                component.Item.Avatar.Surname = playerSurname.Value;
+                                component.Item.Avatar.Name = playerName.Value;
+                            }
+                        }
+                    }
                 }
             }
 
@@ -854,15 +876,21 @@ namespace PathOfWuxia
         {
             PartyCreationSystem partyCreationSystem = Game.World.GetSystem<PartyCreationSystem>();
             IEntity playerEntity = partyCreationSystem.PlayerEntity;
-            PartyComponent partyComponent = playerEntity.GetComponent<PartyComponent>();
-            IList<string> members = partyComponent.Members;
-            if(property == CharacterProperty.Memory)
+            if (playerEntity != null)
             {
-                Console.WriteLine("CharacterPropertyInfo_GetTotalIntPatch_addskillColumnNum");
-                IEntity entity = __instance.Entity;
-                if (members.Contains(entity.GetComponent<NpcComponent>().Id))
+                PartyComponent partyComponent = playerEntity.GetComponent<PartyComponent>();
+                if (partyComponent != null)
                 {
-                    __result += addskillColumnNum.Value;
+                    IList<string> members = partyComponent.Members;
+                    if (property == CharacterProperty.Memory)
+                    {
+                        Console.WriteLine("CharacterPropertyInfo_GetTotalIntPatch_addskillColumnNum");
+                        IEntity entity = __instance.Entity;
+                        if (members.Contains(entity.GetComponent<NpcComponent>().Id))
+                        {
+                            __result += addskillColumnNum.Value;
+                        }
+                    }
                 }
             }
         }
@@ -875,6 +903,124 @@ namespace PathOfWuxia
             if (autoBattle.Value)
             {
                 __result = false;
+                return false;
+            }
+            return true;
+        }
+
+        //大地图互动点常亮，碰撞箱范围改为100
+        [HarmonyPostfix, HarmonyPatch(typeof(HarvestTriggerSystem), "Setup")]
+        public static void HarvestTriggerSystem_SetupPatch_TriggerPointAlwaysShow(HarvestTriggerSystem __instance,ref IEntity entity)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                Console.WriteLine("HarvestTriggerSystem_SetupPatch_TriggerPointAlwaysShow");
+                GameObject gameObject = entity.GetGameObject();
+                if (gameObject == null)
+                {
+                    return;
+                }
+                Collider componentInChildren = gameObject.GetComponentInChildren<Collider>();
+                if(componentInChildren is SphereCollider)
+                {
+                    SphereCollider sphereCollider = (SphereCollider)componentInChildren;
+                    if (sphereCollider == null)
+                    {
+                        return;
+                    }
+                    sphereCollider.radius = 100f;
+                }
+                else if (componentInChildren is BoxCollider)
+                {
+                    BoxCollider boxCollider = (BoxCollider)componentInChildren;
+                    if (boxCollider == null)
+                    {
+                        return;
+                    }
+                    boxCollider.size = new Vector3(100f, 100f, 100f);
+                }
+            }
+        }
+        //大地图互动点常亮-鼠标移入文字不消失
+        [HarmonyPrefix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetMouseEnterView")]
+        public static bool WGHarvestPointBillBoard_SetMouseEnterViewPatch_TriggerPointAlwaysShow(WGHarvestPointBillBoard __instance)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        //大地图互动点常亮-鼠标移出文字不消失
+        [HarmonyPrefix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetNormalView")]
+        public static bool WGHarvestPointBillBoard_SetNormalViewPatch_TriggerPointAlwaysShow(WGHarvestPointBillBoard __instance)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                return false;
+            }
+            return true;
+        }
+
+        //中地图互动点常亮，给每个entity添加TargetBillboardComponent
+        [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "Process")]
+        public static bool TargetSystem_ProcessPatch_TriggerPointAlwaysShow(TargetSystem __instance,ref int entityId)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                //Console.WriteLine("TargetSystem_OnSceneLoadedPatch_TriggerPointAlwaysShow");
+                IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
+                IEntity entity = entityCollection.GetEntity(entityId);
+                GameObject gameObject = entity.GetGameObject();
+                if (gameObject == null || !gameObject.activeSelf)
+                {
+                    return false;
+                }
+                IPlayerPositionProvider provider = Traverse.Create(__instance).Field("provider").GetValue<IPlayerPositionProvider>();
+                if (provider.Player == null)
+                {
+                    return false;
+                }
+                if (entity != null && !entity.HasComponent<TargetBillboardComponent>())
+                {
+                    TargetBillboardComponent component = new TargetBillboardComponent
+                    {
+                        Data = entity
+                    };
+                    entity.AddComponent(component);
+                }
+
+                float num = Vector3.Distance(provider.Player.transform.position, gameObject.transform.position);
+                float maxInteractiveDistance = Traverse.Create(__instance).Field("maxInteractiveDistance").GetValue<float>();
+                if (num > maxInteractiveDistance)
+                {
+                    return false;
+                }
+                float minDistance = Traverse.Create(__instance).Field("minDistance").GetValue<float>();
+                if (num > minDistance)
+                {
+                    return false;
+                }
+                Traverse.Create(__instance).Field("currentNearest").SetValue(entity);
+                Traverse.Create(__instance).Field("minDistance").SetValue(num);
+                return false;
+            }
+            return true;
+        }
+
+        //中地图互动点常亮-非最近物体不删除TargetBillboardComponent
+        [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "AfterProcessing")]
+        public static bool TargetSystem_AfterProcessingPatch_TriggerPointAlwaysShow(TargetSystem __instance)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                IEntity currentNearest = Traverse.Create(__instance).Field("currentNearest").GetValue<IEntity>();
+                IEntity prevNearest = Traverse.Create(__instance).Field("prevNearest").GetValue<IEntity>();
+                if (prevNearest != currentNearest)
+                {
+                    Traverse.Create(__instance).Field("prevNearest").SetValue(currentNearest);
+                }
                 return false;
             }
             return true;
