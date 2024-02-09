@@ -32,4 +32,10 @@
 
 12.增加技能栏位数
 
-![QQ截图20240209013344](https://github.com/findsky6544/Gulong_plugin/assets/36687288/bf6c0498-bd1b-4a92-9c1c-ea52c2be3387)
+13.互动点常亮
+
+
+![QQ截图20240209160413](https://github.com/findsky6544/Gulong_plugin/assets/36687288/39398df6-64e5-4a6a-bf8e-e825f885229f)
+![QQ截图20240209160713](https://github.com/findsky6544/Gulong_plugin/assets/36687288/ca00be58-9376-42a9-bf50-ce3ad0ac386f)
+![QQ截图20240209160615](https://github.com/findsky6544/Gulong_plugin/assets/36687288/713298b4-80e4-4da4-8ec6-af5012d5ea56)
+![QQ截图20240209160524](https://github.com/findsky6544/Gulong_plugin/assets/36687288/41dd59f1-c739-4ce0-a96b-84af2be174af)
