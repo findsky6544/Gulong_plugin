@@ -34,6 +34,8 @@
 
 13.互动点常亮
 
+14.互动点常亮距离
+
 
 ![QQ截图20240209160413](https://github.com/findsky6544/Gulong_plugin/assets/36687288/39398df6-64e5-4a6a-bf8e-e825f885229f)
 ![QQ截图20240209160713](https://github.com/findsky6544/Gulong_plugin/assets/36687288/ca00be58-9376-42a9-bf50-ce3ad0ac386f)
