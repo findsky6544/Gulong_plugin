@@ -4,7 +4,7 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>Gulong_plugin</AssemblyName>
     <Description>My first plugin</Description>
-    <Version>1.0.0</Version>
+    <Version>1.2.0</Version>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <LangVersion>latest</LangVersion>
     <BaseOutputPath>bin\</BaseOutputPath>
@@ -35,6 +35,9 @@
     <Reference Include="EcsRx.Infrastructure">
       <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Infrastructure.dll</HintPath>
     </Reference>
+    <Reference Include="EcsRx.Plugins.Batching">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Plugins.Batching.dll</HintPath>
+    </Reference>
     <Reference Include="EcsRx.Plugins.ReactiveSystems">
       <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\EcsRx.Plugins.ReactiveSystems.dll</HintPath>
     </Reference>
@@ -46,6 +49,9 @@
     </Reference>
     <Reference Include="GuLong">
       <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\GuLong.dll</HintPath>
+    </Reference>
+    <Reference Include="HighlightingSystem">
+      <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\HighlightingSystem.dll</HintPath>
     </Reference>
     <Reference Include="Ninject">
       <HintPath>..\..\..\..\..\game\STEAM\steamapps\common\古龙风云录\GuLong_Data\Managed\Ninject.dll</HintPath>

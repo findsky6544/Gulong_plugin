@@ -19,7 +19,9 @@ using Heluo.Manager;
 using Heluo.Resource;
 using Heluo.UI;
 using Heluo.Utility;
+using HighlightingSystem;
 using Ninject;
+using Ninject.Activation;
 using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
@@ -59,6 +61,7 @@ namespace PathOfWuxia
         static ConfigEntry<bool> showCoolDownTime;
         static ConfigEntry<bool> rightClickCloseUI;
         static ConfigEntry<bool> TriggerPointAlwaysShow;
+        static ConfigEntry<int> TriggerPointAlwaysShowDistance;
         static EventHandler ReplacePlayerAvatarEventHander;
 
         static bool speedOn = false;
@@ -68,17 +71,18 @@ namespace PathOfWuxia
             allMemberGetExp = plugin.Config.Bind("战斗设定", "所有角色获得经验", false, "战斗后所有角色都可获得经验");
             maxBattleAvatar = plugin.Config.Bind("战斗设定", "最大上阵人数", 4, "修改最大上阵人数");
             onePunch = plugin.Config.Bind("战斗设定", "一击99999999", false, "不破锁血等，道具无效");
-            gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度");
-            speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "开关速度调节");
-            playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度");
-            unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿.如果关闭后图标不消失可SL解决");
+            gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度，按速度热键开启");
+            speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "游戏速度启用/关闭");
+            playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度，默认为6");
+            unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿。如果关闭后图标不消失可SL解决");
             rightClickCloseUI = plugin.Config.Bind("UI增强", "右键关闭UI界面", false, "右键关闭UI界面");
             ShowRepluseTick = plugin.Config.Bind("UI增强", "显示时序数值", false, "战斗中显示时序数值");
             showGiftFavorite = plugin.Config.Bind("UI增强", "显示礼物喜爱度", false, "显示礼物喜爱度");
             playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
             playerName = plugin.Config.Bind("游戏设定", "主角名", "雨", "修改主角名");
             addskillColumnNum = plugin.Config.Bind("游戏设定", "增加技能栏位数", 0, "每人最多6个栏位，多了无效");
-            TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "所有物品常亮后靠的太近的两个物体可能会分不清正在调查哪个，请自行分辨");
+            TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "大地图采集点、奇人、中地图调查点、角色等。可能会引起卡顿");
+            TriggerPointAlwaysShowDistance = plugin.Config.Bind("UI增强", "互动点常亮距离", 50, "距离以外的互动点不亮,默认50，太小可能会出bug");
             autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
             //modSupport = plugin.Config.Bind("mod支持", "mod支持", false, "mod支持");
             plugin.onUpdate += OnUpdate;
@@ -843,7 +847,7 @@ namespace PathOfWuxia
         {
             Console.WriteLine("ReplacePlayerAvatarData");
             NpcDataSystem system = Game.World.GetSystem<NpcDataSystem>();
-            if(system != null)
+            if (system != null)
             {
                 IEntity entity = system[Id];
                 if (entity != null)
@@ -872,7 +876,7 @@ namespace PathOfWuxia
         }
         //增加技能栏位
         [HarmonyPostfix, HarmonyPatch(typeof(CharacterPropertyInfo), "GetTotalInt")]
-        public static void CharacterPropertyInfo_GetTotalIntPatch_addskillColumnNum(CharacterPropertyInfo __instance,ref CharacterProperty property, ref int __result)
+        public static void CharacterPropertyInfo_GetTotalIntPatch_addskillColumnNum(CharacterPropertyInfo __instance, ref CharacterProperty property, ref int __result)
         {
             PartyCreationSystem partyCreationSystem = Game.World.GetSystem<PartyCreationSystem>();
             IEntity playerEntity = partyCreationSystem.PlayerEntity;
@@ -908,40 +912,7 @@ namespace PathOfWuxia
             return true;
         }
 
-        //大地图互动点常亮，碰撞箱范围改为100
-        [HarmonyPostfix, HarmonyPatch(typeof(HarvestTriggerSystem), "Setup")]
-        public static void HarvestTriggerSystem_SetupPatch_TriggerPointAlwaysShow(HarvestTriggerSystem __instance,ref IEntity entity)
-        {
-            if (TriggerPointAlwaysShow.Value)
-            {
-                Console.WriteLine("HarvestTriggerSystem_SetupPatch_TriggerPointAlwaysShow");
-                GameObject gameObject = entity.GetGameObject();
-                if (gameObject == null)
-                {
-                    return;
-                }
-                Collider componentInChildren = gameObject.GetComponentInChildren<Collider>();
-                if(componentInChildren is SphereCollider)
-                {
-                    SphereCollider sphereCollider = (SphereCollider)componentInChildren;
-                    if (sphereCollider == null)
-                    {
-                        return;
-                    }
-                    sphereCollider.radius = 100f;
-                }
-                else if (componentInChildren is BoxCollider)
-                {
-                    BoxCollider boxCollider = (BoxCollider)componentInChildren;
-                    if (boxCollider == null)
-                    {
-                        return;
-                    }
-                    boxCollider.size = new Vector3(100f, 100f, 100f);
-                }
-            }
-        }
-        //大地图互动点常亮-鼠标移入文字不消失
+        //大地图互动点常亮-鼠标移入不做任何操作
         [HarmonyPrefix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetMouseEnterView")]
         public static bool WGHarvestPointBillBoard_SetMouseEnterViewPatch_TriggerPointAlwaysShow(WGHarvestPointBillBoard __instance)
         {
@@ -952,7 +923,7 @@ namespace PathOfWuxia
             return true;
         }
 
-        //大地图互动点常亮-鼠标移出文字不消失
+        //大地图互动点常亮-鼠标移出不做任何操作
         [HarmonyPrefix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetNormalView")]
         public static bool WGHarvestPointBillBoard_SetNormalViewPatch_TriggerPointAlwaysShow(WGHarvestPointBillBoard __instance)
         {
@@ -963,9 +934,35 @@ namespace PathOfWuxia
             return true;
         }
 
-        //中地图互动点常亮，给每个entity添加TargetBillboardComponent
+        //大地图互动点常亮-鼠标移出重新加回高亮
+        [HarmonyPostfix, HarmonyPatch(typeof(HarvestPointBillboardViewSystem), "OnPointerExit")]
+        public static void HarvestPointBillboardViewSystem_OnPointerExitPatch_TriggerPointAlwaysShow(HarvestPointBillboardViewSystem __instance, ref IEntity entity)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                GameObject gameObject = entity.GetGameObject();
+                if (!gameObject)
+                {
+                    return;
+                }
+                gameObject.AddComponentIfNotExist<Highlighter>(false).enabled = true;
+            }
+        }
+
+        //自己维护的一个entity列表，主要用来移除除最近物体外的热键提示
+        public static List<IEntity>list = new List<IEntity>();
+        [HarmonyPostfix, HarmonyPatch(typeof(TargetSystem), "BeforeProcessing")]
+        public static void TargetSystem_BeforeProcessingPatch_TriggerPointAlwaysShow(TargetSystem __instance)
+        {
+            if (TriggerPointAlwaysShow.Value)
+            {
+                list = new List<IEntity>();
+            }
+        }
+
+        //互动点常亮，给每个entity添加TargetBillboardComponent
         [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "Process")]
-        public static bool TargetSystem_ProcessPatch_TriggerPointAlwaysShow(TargetSystem __instance,ref int entityId)
+        public static bool TargetSystem_ProcessPatch_TriggerPointAlwaysShow(TargetSystem __instance, ref int entityId)
         {
             if (TriggerPointAlwaysShow.Value)
             {
@@ -982,16 +979,55 @@ namespace PathOfWuxia
                 {
                     return false;
                 }
-                if (entity != null && !entity.HasComponent<TargetBillboardComponent>())
-                {
-                    TargetBillboardComponent component = new TargetBillboardComponent
-                    {
-                        Data = entity
-                    };
-                    entity.AddComponent(component);
-                }
 
                 float num = Vector3.Distance(provider.Player.transform.position, gameObject.transform.position);
+                //距离范围内的才显示
+                if (num <= TriggerPointAlwaysShowDistance.Value)
+                {
+                    //中地图人物和物品,大地图人物
+                    if (entity != null && !entity.HasComponent<TargetBillboardComponent>() && !entity.HasComponent<HarvestComponent>())
+                    {
+                        TargetBillboardComponent component = new TargetBillboardComponent
+                        {
+                            Data = entity
+                        };
+                        entity.AddComponent(component);
+                    }
+                    list.Add(entity);
+                    //大地图采集点显示名字和高亮
+                    if (entity.HasComponent<HarvestComponent>())
+                    {
+                        if (entity.HasComponent<HarvestPointBillboardComponent>())
+                        {
+                            WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
+                            if (wGHarvestPointBillBoard != null)
+                            {
+                                Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
+                                Name.text = Game.Data.Get<HarvestPointItem>(entity.GetComponent<HarvestComponent>().Id).Name;
+                                GameObject gameObject1 = entity.GetGameObject();
+                                if (!gameObject1)
+                                {
+                                    return false;
+                                }
+                                Highlighter highlighter = gameObject1.AddComponentIfNotExist<Highlighter>(false);
+                                highlighter.enabled = true;
+                                highlighter.ConstantOnImmediate(Color.white);
+                            }
+                        }
+                    }
+                }
+                //距离外移除
+                else
+                {
+                    if (entity.HasComponent<TargetBillboardComponent>())
+                    {
+                        entity.RemoveComponent<TargetBillboardComponent>();
+                    }
+                    else if (entity.HasComponent<HarvestPointBillboardComponent>())
+                    {
+                        entity.RemoveComponent<HarvestPointBillboardComponent>();
+                    }
+                }
                 float maxInteractiveDistance = Traverse.Create(__instance).Field("maxInteractiveDistance").GetValue<float>();
                 if (num > maxInteractiveDistance)
                 {
@@ -1002,6 +1038,7 @@ namespace PathOfWuxia
                 {
                     return false;
                 }
+                //Console.WriteLine("num:"+num+ ",maxInteractiveDistance:"+ maxInteractiveDistance+ ",minDistance:"+ minDistance);
                 Traverse.Create(__instance).Field("currentNearest").SetValue(entity);
                 Traverse.Create(__instance).Field("minDistance").SetValue(num);
                 return false;
@@ -1016,14 +1053,84 @@ namespace PathOfWuxia
             if (TriggerPointAlwaysShow.Value)
             {
                 IEntity currentNearest = Traverse.Create(__instance).Field("currentNearest").GetValue<IEntity>();
+                //除最近物体外都隐藏热键提示
+                list.Remove(currentNearest);
+                foreach(IEntity entity in list)
+                {
+                    GameObject hkb = getHotkeyBase(entity);
+                    if (hkb != null)
+                    {
+                        hkb.SetActive(false);
+                    }
+
+                }
+                //最近物体显示热键提示
                 IEntity prevNearest = Traverse.Create(__instance).Field("prevNearest").GetValue<IEntity>();
                 if (prevNearest != currentNearest)
                 {
+                    if (currentNearest != null)
+                    {
+                        Console.WriteLine("add currentNearest:"+ currentNearest.Id);
+
+                        GameObject hkb = getHotkeyBase(currentNearest);
+                        if (hkb != null)
+                        {
+                            hkb.SetActive(true);
+                        }
+
+                    }
                     Traverse.Create(__instance).Field("prevNearest").SetValue(currentNearest);
+
                 }
                 return false;
             }
             return true;
+        }
+
+        //获取热键提示gameobject
+        public static GameObject getHotkeyBase(IEntity entity)
+        {
+            GameObject hkb = null;
+            if (entity != null)
+            {
+                if (entity.HasComponent<TargetBillboardComponent>())
+                {
+                    GameObject go = entity.GetComponent<TargetBillboardComponent>().Object;
+                    if (go != null)
+                    {
+                        Console.WriteLine(go.name);
+                        Transform transform = go.transform.Find("Target/UITarget/HotkeyBase");
+                        if (transform != null)
+                        {
+                            hkb = transform.gameObject;
+                        }
+                    }
+                    else if (entity.HasComponent<EntityBillboardComponent>())
+                    {
+                        WgPartyBillboard wgPartyBillboard = entity.GetComponent<EntityBillboardComponent>().Object.GetComponent<WgPartyBillboard>();
+                        Transform transform = wgPartyBillboard.transform.Find("Characters/HotkeyBase");
+                        if (transform != null)
+                        {
+                            hkb = transform.gameObject;
+                        }
+                    }
+                }
+                else if (entity.HasComponent<HarvestPointBillboardComponent>())
+                {
+                    GameObject go = entity.GetComponent<HarvestPointBillboardComponent>().Object;
+                    if (go != null)
+                    {
+                        //Console.WriteLine(go.name);
+                        Transform transform = entity.GetComponent<HarvestPointBillboardComponent>().Object.transform.Find("Form/WGTargetBillboard/Target/U/HotkeyBase");
+                        if (transform != null)
+                        {
+                            hkb = transform.gameObject;
+                        }
+                    }
+                }
+
+            }
+            return hkb;
         }
     }
 }
