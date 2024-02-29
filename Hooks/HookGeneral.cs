@@ -1,4 +1,5 @@
-﻿using BepInEx.Configuration;
+﻿using BehaviourMachine;
+using BepInEx.Configuration;
 using EcsRx.Collections.Entity;
 using EcsRx.Components;
 using EcsRx.Entities;
@@ -34,6 +35,9 @@ using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
+using static UnityEngine.UI.Image;
+using Move = Heluo.FSM.Player.Move;
+using Type = System.Type;
 
 namespace PathOfWuxia
 {
@@ -59,10 +63,11 @@ namespace PathOfWuxia
         static ConfigEntry<bool> modSupport;
         static ConfigEntry<bool> unlimitRadarRange;
         static ConfigEntry<bool> showCoolDownTime;
-        static ConfigEntry<bool> rightClickCloseUI;
+        //static ConfigEntry<bool> rightClickCloseUI;
         static ConfigEntry<bool> TriggerPointAlwaysShow;
         static ConfigEntry<int> TriggerPointAlwaysShowDistance;
         static EventHandler ReplacePlayerAvatarEventHander;
+        static ConfigEntry<bool> showPointContent;
 
         static bool speedOn = false;
         public void OnRegister(GulongPlugin plugin)
@@ -75,9 +80,10 @@ namespace PathOfWuxia
             speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "游戏速度启用/关闭");
             playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度，默认为6");
             unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿。如果关闭后图标不消失可SL解决");
-            rightClickCloseUI = plugin.Config.Bind("UI增强", "右键关闭UI界面", false, "右键关闭UI界面");
+            //rightClickCloseUI = plugin.Config.Bind("UI增强", "右键关闭UI界面", false, "右键关闭UI界面");
             ShowRepluseTick = plugin.Config.Bind("UI增强", "显示时序数值", false, "战斗中显示时序数值");
             showGiftFavorite = plugin.Config.Bind("UI增强", "显示礼物喜爱度", false, "显示礼物喜爱度");
+            showPointContent = plugin.Config.Bind("UI增强", "显示采集点内容", false, "显示采集点内容");
             playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
             playerName = plugin.Config.Bind("游戏设定", "主角名", "雨", "修改主角名");
             addskillColumnNum = plugin.Config.Bind("游戏设定", "增加技能栏位数", 0, "每人最多6个栏位，多了无效");
@@ -591,165 +597,6 @@ namespace PathOfWuxia
 
         }
 
-
-        //右键关闭UI
-        //UIControllableForm添加右键关闭，这个是一些窗口的父类
-        [HarmonyPostfix, HarmonyPatch(typeof(UIControllableForm), "MouseUpEvent")]
-        public static void UIControllableForm_MouseUpEventPatch_rightClickCloseUI(UIControllableForm __instance, ref PointerEventData.InputButton btn)
-        {
-            if (rightClickCloseUI.Value)
-            {
-                Console.WriteLine("UIControllableForm_MouseUpEventPatch_rightClickCloseUI");
-                if (btn == PointerEventData.InputButton.Right)
-                {
-                    __instance.Close();
-                }
-            }
-        }
-        //技能界面添加右键关闭
-        [HarmonyPostfix, HarmonyPatch(typeof(UISkillEnhance), "MouseUpEvent")]
-        public static void UISkillEnhance_MouseUpEventPatch_rightClickCloseUI(UIControllableForm __instance, ref PointerEventData.InputButton btn)
-        {
-            if (rightClickCloseUI.Value)
-            {
-                Console.WriteLine("UISkillEnhance_MouseUpEventPatch_rightClickCloseUI");
-                if (btn == PointerEventData.InputButton.Right)
-                {
-                    UIMenuPage uiMenuPage = Game.UI.Get<UIMenuPage>();
-                    uiMenuPage.Close();
-                }
-            }
-        }
-        //物品界面添加右键关闭
-        [HarmonyPrefix, HarmonyPatch(typeof(UIWarehouse), "MouseUpEvent")]
-        public static bool UIWarehouse_MouseUpEventPatch_rightClickCloseUI(UIWarehouse __instance, ref PointerEventData.InputButton btn)
-        {
-            Console.WriteLine("UIWarehouse_MouseUpEventPatch_rightClickCloseUI");
-            if (rightClickCloseUI.Value)
-            {
-                if (btn != PointerEventData.InputButton.Right)
-                {
-                    return false;
-                }
-                InventoryData takenItem = Traverse.Create(__instance).Field("takenItem").GetValue<InventoryData>();
-                if (btn == PointerEventData.InputButton.Right && takenItem != null)
-                {
-                    __instance.ReturnTakenItem();
-                    return false;
-                }
-                GameObject benevolenceMakePrefab = Traverse.Create(__instance).Field("benevolenceMakePrefab").GetValue<GameObject>();
-                if (benevolenceMakePrefab.activeInHierarchy)
-                {
-                    if (Traverse.Create(__instance).Method("IsTaken").GetValue<bool>())
-                    {
-                        return false;
-                    }
-                    __instance.Close();
-                }
-                else if (btn == PointerEventData.InputButton.Right)
-                {
-                    UIMenuPage uiMenuPage = Game.UI.Get<UIMenuPage>();
-                    uiMenuPage.Close();
-                }
-                return false;
-            }
-            return true;
-        }
-
-        static Type[] canRightClickCloseForm = new Type[] {
-            typeof(UIAttributes),
-            typeof(UISkillEnhance),
-            typeof(UIPerception) ,
-            typeof(UIWarehouse),
-            typeof(UIBlueprint),
-            typeof(UIManorVisitor),
-            typeof(UIMosaic),
-            typeof(UIQuest),
-            typeof(UIQuestBranch),
-            typeof(UIQuestChat),
-            typeof(UIHelp),
-            typeof(UIBackground)
-        };
-
-        //基础UIForm添加右键关闭，上面这些窗口都继承该form
-        [HarmonyPostfix, HarmonyPatch(typeof(UIForm), "Show")]
-        public static void UIForm_showPatch_rightClickCloseUI(UIForm __instance)
-        {
-            if (rightClickCloseUI.Value)
-            {
-                bool canRightClickClose = false;
-                foreach (Type form in canRightClickCloseForm)
-                {
-                    if (__instance.GetType().IsAssignableFrom(form))
-                    {
-                        canRightClickClose = true;
-                        break;
-                    }
-                }
-                if (canRightClickClose)
-                {
-                    AddRightClickCloseUIEvent(__instance.gameObject);
-                }
-            }
-        }
-
-        //支线任务界面添加右键关闭
-        [HarmonyPostfix, HarmonyPatch(typeof(UIQuestBranch), "Show")]
-        public static void UIQuestBranch_showPatch_rightClickCloseUI(UIQuestBranch __instance)
-        {
-            if (rightClickCloseUI.Value)
-            {
-                Console.WriteLine("UIQuestBranch_showPatch_rightClickCloseUI");
-                AddRightClickCloseUIEvent(__instance.gameObject);
-            }
-        }
-        //添加右键关闭事件
-        public static void AddRightClickCloseUIEvent(GameObject gameObject)
-        {
-            Console.WriteLine("UIForm_showPatch_rightClickCloseUI");
-            TouchController touchController = (gameObject.GetComponent<TouchController>() ?? gameObject.AddComponent<TouchController>());
-            touchController.OnMouseUp = (Action<float, float, PointerEventData.InputButton>)Delegate.Combine(touchController.OnMouseUp, new Action<float, float, PointerEventData.InputButton>((x, y, btn) =>
-            {
-                if (rightClickCloseUI.Value)
-                {
-                    if (btn == PointerEventData.InputButton.Right)
-                    {
-                        Console.WriteLine(gameObject.name + ":right click");
-                        UIMenuPage uiMenuPage = Game.UI.Get<UIMenuPage>();
-                        uiMenuPage.Close();
-                    }
-                }
-            }));
-        }
-
-        //角色信息界面添加右键关闭
-        [HarmonyPostfix, HarmonyPatch(typeof(WGUnitInfo), "MouseDown")]
-        public static void WGUnitInfo_MouseDownPatch_rightClickCloseUI(WGUnitInfo __instance)
-        {
-            if (rightClickCloseUI.Value)
-            {
-                Console.WriteLine("WGUnitInfo_MouseDownPatch_rightClickCloseUI");
-                TouchController touchController = (__instance.gameObject.GetComponent<TouchController>() ?? __instance.gameObject.AddComponent<TouchController>());
-                touchController.OnMouseUp = (Action<float, float, PointerEventData.InputButton>)Delegate.Combine(touchController.OnMouseUp, new Action<float, float, PointerEventData.InputButton>((x, y, btn) =>
-                {
-                    if (rightClickCloseUI.Value)
-                    {
-                        if (btn == PointerEventData.InputButton.Right)
-                        {
-                            Console.WriteLine(__instance.gameObject.name + ":right click");
-                            WGSkillPrompt skillPrompt = Traverse.Create(__instance).Field("skillPrompt").GetValue<WGSkillPrompt>();
-                            if (skillPrompt.isExtraShowing())
-                            {
-                                skillPrompt.HideExtra();
-                                return;
-                            }
-                            __instance.Hide();
-                        }
-                    }
-                }));
-            }
-        }
-
         //显示时序数值-加入新TimeEvent时
         [HarmonyPostfix, HarmonyPatch(typeof(WGTimeline), "OnTimeEventAdd", new Type[] { typeof(ITimedEvent), typeof(Dictionary<ITimedEvent, WGTimelineIcon>), typeof(bool) })]
         public static void WGTimeline_OnTimeEventAddPatch_ShowRepluseTick(WGTimeline __instance)
@@ -950,7 +797,7 @@ namespace PathOfWuxia
         }
 
         //自己维护的一个entity列表，主要用来移除除最近物体外的热键提示
-        public static List<IEntity>list = new List<IEntity>();
+        public static List<IEntity> list = new List<IEntity>();
         [HarmonyPostfix, HarmonyPatch(typeof(TargetSystem), "BeforeProcessing")]
         public static void TargetSystem_BeforeProcessingPatch_TriggerPointAlwaysShow(TargetSystem __instance)
         {
@@ -964,6 +811,73 @@ namespace PathOfWuxia
         [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "Process")]
         public static bool TargetSystem_ProcessPatch_TriggerPointAlwaysShow(TargetSystem __instance, ref int entityId)
         {
+            if (showPointContent.Value)
+            {
+                IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
+                IEntity entity = entityCollection.GetEntity(entityId);
+                if (entity.HasComponent<HarvestComponent>())
+                {
+                    if (entity.HasComponent<HarvestPointBillboardComponent>())
+                    {
+                        WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
+                        if (wGHarvestPointBillBoard != null)
+                        {
+                            string newName = "";
+                            HarvestComponent component = entity.GetComponent<HarvestComponent>();
+                            string[] rewards = component.Rewards.Split(',');
+                            for (int i = 0; i < rewards.Length; i++)
+                            {
+                                RewardItem rewardItem = Game.Data.Get<RewardItem>(rewards[i]);
+                                if (rewardItem != null)
+                                {
+                                    string msg_name = string.Empty;
+                                    int msg_count = 1;
+                                    rewardItem.Rewards.nodes.ForEach(delegate (OutputNode x)
+                                    {
+                                        if (x != null)
+                                        {
+                                            RewardItemAction rewardItemAction;
+                                            if ((rewardItemAction = (x as RewardItemAction)) == null)
+                                            {
+                                                RewardMoney rewardMoney;
+                                                if ((rewardMoney = (x as RewardMoney)) != null)
+                                                {
+                                                    RewardMoney rewardMoney2 = rewardMoney;
+                                                    msg_name = Game.Data.Get<StringTable>("resource006").Text;
+                                                    msg_count = rewardMoney2.value;
+                                                }
+                                            }
+                                            else
+                                            {
+                                                RewardItemAction rewardItemAction2 = rewardItemAction;
+                                                msg_name = rewardItemAction2.GetData().Item.Name;
+                                                int num = msg_count = rewardItemAction2.GetData().Count;
+                                                if (rewardItemAction2.GetData().Item.MainCategory == PropsCategory.Material)
+                                                {
+                                                    msg_count = num;
+                                                    string text = Game.GameData.Manor.ManorCraftingBuffIds[ManorBuffType.HarvestPointProfitOnCollection];
+                                                    if (!text.IsNullOrEmpty())
+                                                    {
+                                                        msg_count = Game.Data.Get<ManorBuffItem>(text).ApplyBuffToValue(num);
+                                                    }
+                                                    int amount = msg_count - num;
+                                                }
+                                            }
+                                        }
+                                        if (!msg_name.IsNullOrEmpty())
+                                        {
+                                            newName += string.Format("{0} x {1}\n", msg_name, msg_count);
+                                        }
+                                    });
+                                    Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
+                                    Name.text = newName;
+
+                                }
+                            }
+                        }
+                    }
+                }
+            }
             if (TriggerPointAlwaysShow.Value)
             {
                 //Console.WriteLine("TargetSystem_OnSceneLoadedPatch_TriggerPointAlwaysShow");
@@ -1002,8 +916,8 @@ namespace PathOfWuxia
                             WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
                             if (wGHarvestPointBillBoard != null)
                             {
-                                Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
-                                Name.text = Game.Data.Get<HarvestPointItem>(entity.GetComponent<HarvestComponent>().Id).Name;
+                                //Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
+                                //Name.text = Game.Data.Get<HarvestPointItem>(entity.GetComponent<HarvestComponent>().Id).Name;
                                 GameObject gameObject1 = entity.GetGameObject();
                                 if (!gameObject1)
                                 {
@@ -1043,6 +957,7 @@ namespace PathOfWuxia
                 Traverse.Create(__instance).Field("minDistance").SetValue(num);
                 return false;
             }
+            
             return true;
         }
 
@@ -1055,7 +970,7 @@ namespace PathOfWuxia
                 IEntity currentNearest = Traverse.Create(__instance).Field("currentNearest").GetValue<IEntity>();
                 //除最近物体外都隐藏热键提示
                 list.Remove(currentNearest);
-                foreach(IEntity entity in list)
+                foreach (IEntity entity in list)
                 {
                     GameObject hkb = getHotkeyBase(entity);
                     if (hkb != null)
@@ -1070,7 +985,7 @@ namespace PathOfWuxia
                 {
                     if (currentNearest != null)
                     {
-                        Console.WriteLine("add currentNearest:"+ currentNearest.Id);
+                        Console.WriteLine("add currentNearest:" + currentNearest.Id);
 
                         GameObject hkb = getHotkeyBase(currentNearest);
                         if (hkb != null)
