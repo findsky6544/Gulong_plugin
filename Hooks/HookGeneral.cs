@@ -63,7 +63,6 @@ namespace PathOfWuxia
         static ConfigEntry<bool> modSupport;
         static ConfigEntry<bool> unlimitRadarRange;
         static ConfigEntry<bool> showCoolDownTime;
-        //static ConfigEntry<bool> rightClickCloseUI;
         static ConfigEntry<bool> TriggerPointAlwaysShow;
         static ConfigEntry<int> TriggerPointAlwaysShowDistance;
         static EventHandler ReplacePlayerAvatarEventHander;
@@ -74,13 +73,12 @@ namespace PathOfWuxia
         {
             learnSkillNotEatBook = plugin.Config.Bind("游戏设定", "学技能不吃书", false, "学技能后技能书不消失");
             allMemberGetExp = plugin.Config.Bind("战斗设定", "所有角色获得经验", false, "战斗后所有角色都可获得经验");
-            maxBattleAvatar = plugin.Config.Bind("战斗设定", "最大上阵人数", 4, "修改最大上阵人数");
+            maxBattleAvatar = plugin.Config.Bind("战斗设定", "最大上阵人数", -1, "修改最大上阵人数,-1为禁用");
             onePunch = plugin.Config.Bind("战斗设定", "一击99999999", false, "不破锁血等，道具无效");
             gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度，按速度热键开启");
             speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "游戏速度启用/关闭");
             playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度，默认为6");
             unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿。如果关闭后图标不消失可SL解决");
-            //rightClickCloseUI = plugin.Config.Bind("UI增强", "右键关闭UI界面", false, "右键关闭UI界面");
             ShowRepluseTick = plugin.Config.Bind("UI增强", "显示时序数值", false, "战斗中显示时序数值");
             showGiftFavorite = plugin.Config.Bind("UI增强", "显示礼物喜爱度", false, "显示礼物喜爱度");
             showPointContent = plugin.Config.Bind("UI增强", "显示采集点内容", false, "显示采集点内容");
@@ -90,7 +88,6 @@ namespace PathOfWuxia
             TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "大地图采集点、奇人、中地图调查点、角色等。可能会引起卡顿");
             TriggerPointAlwaysShowDistance = plugin.Config.Bind("UI增强", "互动点常亮距离", 50, "距离以外的互动点不亮,默认50，太小可能会出bug");
             autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
-            //modSupport = plugin.Config.Bind("mod支持", "mod支持", false, "mod支持");
             plugin.onUpdate += OnUpdate;
 
             ReplacePlayerAvatarEventHander += new EventHandler((o, e) =>
@@ -511,7 +508,10 @@ namespace PathOfWuxia
         private static bool PlayerConfigure_SetNumberPatch_ChangeMaxBattleAvatarNum(PlayerConfigure __instance, ref int max)
         {
             Console.WriteLine("PlayerConfigure_SetNumberPatch_ChangeMaxBattleAvatarNum");
-            max = maxBattleAvatar.Value;
+            if(maxBattleAvatar.Value > 0)
+            {
+                max = maxBattleAvatar.Value;
+            }
             return true;
         }
 
@@ -767,7 +767,27 @@ namespace PathOfWuxia
             {
                 return false;
             }
+            if (showPointContent.Value)
+            {
+                IEntity entity = Traverse.Create(__instance).Field("entity").GetValue<IEntity>();
+                Text name = Traverse.Create(__instance).Field("Name").GetValue<Text>();
+                name.text = getHarvestName(entity);
+            }
             return true;
+        }
+        [HarmonyPostfix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetMouseEnterView")]
+        public static void WGHarvestPointBillBoard_SetMouseEnterViewPatch_showPointContent(WGHarvestPointBillBoard __instance)
+        {
+            IEntity entity = Traverse.Create(__instance).Field("entity").GetValue<IEntity>();
+            Text name = Traverse.Create(__instance).Field("Name").GetValue<Text>();
+            name.text = getHarvestName(entity);
+        }
+        [HarmonyPostfix, HarmonyPatch(typeof(WGHarvestPointBillBoard), "SetTriggerEnterView")]
+        public static void WGHarvestPointBillBoard_SetTriggerEnterViewPatch_showPointContent(WGHarvestPointBillBoard __instance)
+        {
+            IEntity entity = Traverse.Create(__instance).Field("entity").GetValue<IEntity>();
+            Text name = Traverse.Create(__instance).Field("Name").GetValue<Text>();
+            name.text = getHarvestName(entity);
         }
 
         //大地图互动点常亮-鼠标移出不做任何操作
@@ -815,6 +835,101 @@ namespace PathOfWuxia
             {
                 IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
                 IEntity entity = entityCollection.GetEntity(entityId);
+
+            }
+            if (TriggerPointAlwaysShow.Value)
+            {
+                //Console.WriteLine("TargetSystem_OnSceneLoadedPatch_TriggerPointAlwaysShow");
+                IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
+                IEntity entity = entityCollection.GetEntity(entityId);
+                GameObject gameObject = entity.GetGameObject();
+                if (gameObject == null || !gameObject.activeSelf)
+                {
+                    return false;
+                }
+                IPlayerPositionProvider provider = Traverse.Create(__instance).Field("provider").GetValue<IPlayerPositionProvider>();
+                if (provider.Player == null)
+                {
+                    return false;
+                }
+
+                float num = Vector3.Distance(provider.Player.transform.position, gameObject.transform.position);
+                //距离范围内的才显示
+                if (num <= TriggerPointAlwaysShowDistance.Value)
+                {
+                    //中地图人物和物品,大地图人物
+                    if (entity != null && !entity.HasComponent<TargetBillboardComponent>() && !entity.HasComponent<HarvestComponent>())
+                    {
+                        TargetBillboardComponent component = new TargetBillboardComponent
+                        {
+                            Data = entity
+                        };
+                        entity.AddComponent(component);
+                    }
+                    list.Add(entity);
+                    //大地图采集点显示名字和高亮
+                    if (entity.HasComponent<HarvestComponent>())
+                    {
+                        if (entity.HasComponent<HarvestPointBillboardComponent>())
+                        {
+                            WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
+                            if (wGHarvestPointBillBoard != null)
+                            {
+                                Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
+                                Name.text = getHarvestName(entity);
+                                GameObject gameObject1 = entity.GetGameObject();
+                                if (!gameObject1)
+                                {
+                                    return false;
+                                }
+                                Highlighter highlighter = gameObject1.AddComponentIfNotExist<Highlighter>(false);
+                                highlighter.enabled = true;
+                                highlighter.ConstantOnImmediate(Color.white);
+                            }
+                        }
+                    }
+                }
+                //距离外移除
+                else
+                {
+                    if (entity.HasComponent<TargetBillboardComponent>())
+                    {
+                        entity.RemoveComponent<TargetBillboardComponent>();
+                    }
+                    else if (entity.HasComponent<HarvestPointBillboardComponent>())
+                    {
+                        entity.RemoveComponent<HarvestPointBillboardComponent>();
+                    }
+                }
+                float maxInteractiveDistance = Traverse.Create(__instance).Field("maxInteractiveDistance").GetValue<float>();
+                if (num > maxInteractiveDistance)
+                {
+                    return false;
+                }
+                float minDistance = Traverse.Create(__instance).Field("minDistance").GetValue<float>();
+                if (num > minDistance)
+                {
+                    return false;
+                }
+                //Console.WriteLine("num:"+num+ ",maxInteractiveDistance:"+ maxInteractiveDistance+ ",minDistance:"+ minDistance);
+                Traverse.Create(__instance).Field("currentNearest").SetValue(entity);
+                Traverse.Create(__instance).Field("minDistance").SetValue(num);
+                return false;
+            }
+
+            return true;
+        }
+
+        public static string getHarvestName(IEntity entity)
+        {
+            HarvestComponent component = entity.GetComponent<HarvestComponent>();
+            if (!showPointContent.Value)
+            {
+                return Game.Data.Get<HarvestPointItem>(component.Id).Name;
+            }
+            else
+            {
+                string newName = "";
                 if (entity.HasComponent<HarvestComponent>())
                 {
                     if (entity.HasComponent<HarvestPointBillboardComponent>())
@@ -822,8 +937,6 @@ namespace PathOfWuxia
                         WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
                         if (wGHarvestPointBillBoard != null)
                         {
-                            string newName = "";
-                            HarvestComponent component = entity.GetComponent<HarvestComponent>();
                             string[] rewards = component.Rewards.Split(',');
                             for (int i = 0; i < rewards.Length; i++)
                             {
@@ -869,96 +982,13 @@ namespace PathOfWuxia
                                             newName += string.Format("{0} x {1}\n", msg_name, msg_count);
                                         }
                                     });
-                                    Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
-                                    Name.text = newName;
-
                                 }
                             }
                         }
                     }
                 }
+                return newName;
             }
-            if (TriggerPointAlwaysShow.Value)
-            {
-                //Console.WriteLine("TargetSystem_OnSceneLoadedPatch_TriggerPointAlwaysShow");
-                IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
-                IEntity entity = entityCollection.GetEntity(entityId);
-                GameObject gameObject = entity.GetGameObject();
-                if (gameObject == null || !gameObject.activeSelf)
-                {
-                    return false;
-                }
-                IPlayerPositionProvider provider = Traverse.Create(__instance).Field("provider").GetValue<IPlayerPositionProvider>();
-                if (provider.Player == null)
-                {
-                    return false;
-                }
-
-                float num = Vector3.Distance(provider.Player.transform.position, gameObject.transform.position);
-                //距离范围内的才显示
-                if (num <= TriggerPointAlwaysShowDistance.Value)
-                {
-                    //中地图人物和物品,大地图人物
-                    if (entity != null && !entity.HasComponent<TargetBillboardComponent>() && !entity.HasComponent<HarvestComponent>())
-                    {
-                        TargetBillboardComponent component = new TargetBillboardComponent
-                        {
-                            Data = entity
-                        };
-                        entity.AddComponent(component);
-                    }
-                    list.Add(entity);
-                    //大地图采集点显示名字和高亮
-                    if (entity.HasComponent<HarvestComponent>())
-                    {
-                        if (entity.HasComponent<HarvestPointBillboardComponent>())
-                        {
-                            WGHarvestPointBillBoard wGHarvestPointBillBoard = entity.GetComponent<HarvestPointBillboardComponent>().Object.GetComponent<WGHarvestPointBillBoard>();
-                            if (wGHarvestPointBillBoard != null)
-                            {
-                                //Text Name = Traverse.Create(wGHarvestPointBillBoard).Field("Name").GetValue<Text>();
-                                //Name.text = Game.Data.Get<HarvestPointItem>(entity.GetComponent<HarvestComponent>().Id).Name;
-                                GameObject gameObject1 = entity.GetGameObject();
-                                if (!gameObject1)
-                                {
-                                    return false;
-                                }
-                                Highlighter highlighter = gameObject1.AddComponentIfNotExist<Highlighter>(false);
-                                highlighter.enabled = true;
-                                highlighter.ConstantOnImmediate(Color.white);
-                            }
-                        }
-                    }
-                }
-                //距离外移除
-                else
-                {
-                    if (entity.HasComponent<TargetBillboardComponent>())
-                    {
-                        entity.RemoveComponent<TargetBillboardComponent>();
-                    }
-                    else if (entity.HasComponent<HarvestPointBillboardComponent>())
-                    {
-                        entity.RemoveComponent<HarvestPointBillboardComponent>();
-                    }
-                }
-                float maxInteractiveDistance = Traverse.Create(__instance).Field("maxInteractiveDistance").GetValue<float>();
-                if (num > maxInteractiveDistance)
-                {
-                    return false;
-                }
-                float minDistance = Traverse.Create(__instance).Field("minDistance").GetValue<float>();
-                if (num > minDistance)
-                {
-                    return false;
-                }
-                //Console.WriteLine("num:"+num+ ",maxInteractiveDistance:"+ maxInteractiveDistance+ ",minDistance:"+ minDistance);
-                Traverse.Create(__instance).Field("currentNearest").SetValue(entity);
-                Traverse.Create(__instance).Field("minDistance").SetValue(num);
-                return false;
-            }
-            
-            return true;
         }
 
         //中地图互动点常亮-非最近物体不删除TargetBillboardComponent
