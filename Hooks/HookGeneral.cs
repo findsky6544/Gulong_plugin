@@ -1,7 +1,5 @@
-﻿using BehaviourMachine;
-using BepInEx.Configuration;
+﻿using BepInEx.Configuration;
 using EcsRx.Collections.Entity;
-using EcsRx.Components;
 using EcsRx.Entities;
 using EcsRx.Extensions;
 using EcsRx.Unity.Extensions;
@@ -10,11 +8,11 @@ using HarmonyLib;
 using Heluo;
 using Heluo.Actor;
 using Heluo.Battle;
-using Heluo.Controller;
 using Heluo.Data;
 using Heluo.Features;
 using Heluo.Flow;
 using Heluo.FSM.Battle;
+using Heluo.FSM.Main;
 using Heluo.FSM.Player;
 using Heluo.Manager;
 using Heluo.Resource;
@@ -22,20 +20,14 @@ using Heluo.UI;
 using Heluo.Utility;
 using HighlightingSystem;
 using Ninject;
-using Ninject.Activation;
 using Ninject.Parameters;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
-using TMPro;
 using UniRx;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using UnityEngine.UIElements;
-using static UnityEngine.UI.Image;
 using Move = Heluo.FSM.Player.Move;
 using Type = System.Type;
 
@@ -48,7 +40,6 @@ namespace PathOfWuxia
         static ConfigEntry<bool> learnSkillNotEatBook;
         static ConfigEntry<bool> allMemberGetExp;
         static ConfigEntry<int> maxBattleAvatar;
-        static ConfigEntry<bool> unlockCamera;
         static ConfigEntry<bool> showGiftFavorite;
         static ConfigEntry<string> playerSurname;
         static ConfigEntry<string> playerName;
@@ -62,11 +53,14 @@ namespace PathOfWuxia
         static ConfigEntry<int> saveNum;
         static ConfigEntry<bool> modSupport;
         static ConfigEntry<bool> unlimitRadarRange;
-        static ConfigEntry<bool> showCoolDownTime;
         static ConfigEntry<bool> TriggerPointAlwaysShow;
         static ConfigEntry<int> TriggerPointAlwaysShowDistance;
         static EventHandler ReplacePlayerAvatarEventHander;
         static ConfigEntry<bool> showPointContent;
+        static ConfigEntry<bool> showStayTrigger;
+        static ConfigEntry<bool> showSikong;
+        static ConfigEntry<bool> skipBattleAnime;
+        static ConfigEntry<bool> autoHarvest;
 
         static bool speedOn = false;
         public void OnRegister(GulongPlugin plugin)
@@ -88,6 +82,7 @@ namespace PathOfWuxia
             TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "大地图采集点、奇人、中地图调查点、角色等。可能会引起卡顿");
             TriggerPointAlwaysShowDistance = plugin.Config.Bind("UI增强", "互动点常亮距离", 50, "距离以外的互动点不亮,默认50，太小可能会出bug");
             autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
+            autoHarvest = plugin.Config.Bind("游戏设定", "自动采集资源", false, "靠近大地图资源后自动采集");
             plugin.onUpdate += OnUpdate;
 
             ReplacePlayerAvatarEventHander += new EventHandler((o, e) =>
@@ -508,7 +503,7 @@ namespace PathOfWuxia
         private static bool PlayerConfigure_SetNumberPatch_ChangeMaxBattleAvatarNum(PlayerConfigure __instance, ref int max)
         {
             Console.WriteLine("PlayerConfigure_SetNumberPatch_ChangeMaxBattleAvatarNum");
-            if(maxBattleAvatar.Value > 0)
+            if (maxBattleAvatar.Value > 0)
             {
                 max = maxBattleAvatar.Value;
             }
@@ -679,13 +674,13 @@ namespace PathOfWuxia
         static string[] playerIds = new string[] { "na0000", "na0000a", "na0000_boss", "nq0131" };
 
         [HarmonyPostfix, HarmonyPatch(typeof(NpcDataSystem), "Setup")]
-        public static void NpcDataSystem_SetupPatch_ChangePlayerSurname(NpcDataSystem __instance, ref IEntity entity)
+        public static void NpcDataSystem_SetupPatch_ChangePlayername(NpcDataSystem __instance, ref IEntity entity)
         {
             NpcComponent component = entity.GetComponent<NpcComponent>();
 
             if (playerIds.Contains(component.Id))
             {
-                Console.WriteLine("NpcDataSystem_SetupPatch_ChangePlayerSurname");
+                Console.WriteLine("NpcDataSystem_SetupPatch_ChangePlayername");
                 ReplacePlayerAvatarData(component.Id);
             }
         }
@@ -721,6 +716,54 @@ namespace PathOfWuxia
             }
 
         }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(UINpcDialog), "ParsingToItem")]
+        public static void UINpcDialog_ParsingToItemPatch_ChangePlayername(UINpcDialog __instance, ref string __result)
+        {
+            __result = changeTalkContentPlayerName(__result);
+        }
+
+        [HarmonyPostfix, HarmonyPatch(typeof(UIDialogHistory), "ParsingToItem")]
+        public static void UIDialogHistory_ParsingToItemPatch_ChangePlayername(UIDialogHistory __instance, ref string __result)
+        {
+            __result = changeTalkContentPlayerName(__result);
+        }
+
+
+        public static string changeTalkContentPlayerName(string content)
+        {
+            content = content.Replace("辰……辰雨", playerSurname.Value + "……" + playerSurname.Value + playerName.Value);
+
+            content = content.Replace("辰、辰雨", playerSurname.Value + "、" + playerSurname.Value + playerName.Value);
+
+            content = content.Replace("辰……小辰雨", playerSurname.Value + "……小" + playerSurname.Value + playerName.Value);
+
+            content = content.Replace("姓辰名雨", "姓" + playerSurname.Value + "名" + playerName.Value);
+
+            content = content.Replace("辰雨", playerSurname.Value + playerName.Value);
+
+            content = content.Replace("辰什么雨", playerSurname.Value + "什么" + playerName.Value);
+
+            string newName = playerSurname.Value + playerName.Value;
+            string newName2 = "";
+            for (int i = 0; i < newName.Length; i++)
+            {
+                newName2 += newName[i] + "、";
+            }
+            newName2 = newName2.Substring(newName2.Length - 1);
+            content = content.Replace("辰、雨", newName2);
+
+            newName2 = "";
+            for (int i = 0; i < newName.Length; i++)
+            {
+                newName2 += newName[i] + "！";
+            }
+            newName2 = newName2.Substring(newName2.Length - 1);
+            content = content.Replace("辰！雨", newName2);
+
+            return content;
+        }
+
         //增加技能栏位
         [HarmonyPostfix, HarmonyPatch(typeof(CharacterPropertyInfo), "GetTotalInt")]
         public static void CharacterPropertyInfo_GetTotalIntPatch_addskillColumnNum(CharacterPropertyInfo __instance, ref CharacterProperty property, ref int __result)
@@ -831,12 +874,6 @@ namespace PathOfWuxia
         [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "Process")]
         public static bool TargetSystem_ProcessPatch_TriggerPointAlwaysShow(TargetSystem __instance, ref int entityId)
         {
-            if (showPointContent.Value)
-            {
-                IEntityCollection entityCollection = Traverse.Create(__instance).Field("entityCollection").GetValue<IEntityCollection>();
-                IEntity entity = entityCollection.GetEntity(entityId);
-
-            }
             if (TriggerPointAlwaysShow.Value)
             {
                 //Console.WriteLine("TargetSystem_OnSceneLoadedPatch_TriggerPointAlwaysShow");
@@ -1032,6 +1069,30 @@ namespace PathOfWuxia
             return true;
         }
 
+        //自动采集
+        [HarmonyPrefix, HarmonyPatch(typeof(TargetSystem), "AfterProcessing")]
+        public static bool TargetSystem_AfterProcessingPatch_autoHarvest(TargetSystem __instance)
+        {
+            if (autoHarvest.Value)
+            {
+                IEntity entity = Traverse.Create(__instance).Field("currentNearest").GetValue<IEntity>();
+
+                HarvestComponent harvestComponent;
+                if (entity != null && entity.HasComponent(out harvestComponent))
+                {
+                    WorldMapStateMachine worldMapStateMachine = Game.FSM.GetComponent<WorldMapStateMachine>();
+                    IReusableEventSystem EventSystem = Traverse.Create(worldMapStateMachine).Property("EventSystem").GetValue<IReusableEventSystem>();
+                    EventSystem.Publish<HarvestEventArgs>(delegate (HarvestEventArgs x)
+                    {
+                        x.Target = entity;
+                    });
+                }
+
+                return false;
+            }
+            return true;
+        }
+
         //获取热键提示gameobject
         public static GameObject getHotkeyBase(IEntity entity)
         {
@@ -1043,7 +1104,7 @@ namespace PathOfWuxia
                     GameObject go = entity.GetComponent<TargetBillboardComponent>().Object;
                     if (go != null)
                     {
-                        Console.WriteLine(go.name);
+                        //Console.WriteLine(go.name);
                         Transform transform = go.transform.Find("Target/UITarget/HotkeyBase");
                         if (transform != null)
                         {
