@@ -26,18 +26,27 @@
 
 9.修改角色移动速度
 
-10.右键关闭UI界面
+10.修改主角姓名
 
-11.修改主角姓名
+11.增加技能栏位数
 
-12.增加技能栏位数
+12.互动点常亮
 
-13.互动点常亮
+13.互动点常亮距离
 
-14.互动点常亮距离
+14.采集点显示奖励内容
+
+15.大地图自动采集
+
+16.珍藏浪客十连抽
+
+17.战斗后自动回满气血内力
+
+18.快速传送
 
 
 ![QQ截图20240209160413](https://github.com/findsky6544/Gulong_plugin/assets/36687288/39398df6-64e5-4a6a-bf8e-e825f885229f)
 ![QQ截图20240209160713](https://github.com/findsky6544/Gulong_plugin/assets/36687288/ca00be58-9376-42a9-bf50-ce3ad0ac386f)
 ![QQ截图20240209160615](https://github.com/findsky6544/Gulong_plugin/assets/36687288/713298b4-80e4-4da4-8ec6-af5012d5ea56)
 ![QQ截图20240209160524](https://github.com/findsky6544/Gulong_plugin/assets/36687288/41dd59f1-c739-4ce0-a96b-84af2be174af)
+![QQ截图20240505012659](https://github.com/findsky6544/Gulong_plugin/assets/36687288/1ce6e1e9-40c8-499f-8c86-b7449f63ff7f)
