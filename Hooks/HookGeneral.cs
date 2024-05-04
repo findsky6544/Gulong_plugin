@@ -1,4 +1,5 @@
-﻿using BepInEx.Configuration;
+﻿using BehaviourMachine;
+using BepInEx.Configuration;
 using EcsRx.Collections.Entity;
 using EcsRx.Entities;
 using EcsRx.Extensions;
@@ -8,6 +9,7 @@ using HarmonyLib;
 using Heluo;
 using Heluo.Actor;
 using Heluo.Battle;
+using Heluo.Controller;
 using Heluo.Data;
 using Heluo.Features;
 using Heluo.Flow;
@@ -17,6 +19,7 @@ using Heluo.FSM.Player;
 using Heluo.Manager;
 using Heluo.Resource;
 using Heluo.UI;
+using Heluo.UI.Controller;
 using Heluo.Utility;
 using HighlightingSystem;
 using Ninject;
@@ -27,7 +30,9 @@ using System.Linq;
 using UniRx;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Rendering.VirtualTexturing;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
 using Move = Heluo.FSM.Player.Move;
 using Type = System.Type;
 
@@ -61,6 +66,9 @@ namespace PathOfWuxia
         static ConfigEntry<bool> showSikong;
         static ConfigEntry<bool> skipBattleAnime;
         static ConfigEntry<bool> autoHarvest;
+        static ConfigEntry<bool> tenGacha;
+        static ConfigEntry<bool> restAfterBattle;
+        static ConfigEntry<bool> teleport;
 
         static bool speedOn = false;
         public void OnRegister(GulongPlugin plugin)
@@ -83,6 +91,9 @@ namespace PathOfWuxia
             TriggerPointAlwaysShowDistance = plugin.Config.Bind("UI增强", "互动点常亮距离", 50, "距离以外的互动点不亮,默认50，太小可能会出bug");
             autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
             autoHarvest = plugin.Config.Bind("游戏设定", "自动采集资源", false, "靠近大地图资源后自动采集");
+            tenGacha = plugin.Config.Bind("游戏设定", "珍藏浪客十连抽", false, "珍藏浪客十连抽");
+            restAfterBattle = plugin.Config.Bind("战斗设定", "战斗后自动回满气血内力", false, "战斗后自动回满气血内力");
+            teleport = plugin.Config.Bind("游戏设定", "快速传送", false, "按Tab键开启/关闭。可能会有奇怪的bug");
             plugin.onUpdate += OnUpdate;
 
             ReplacePlayerAvatarEventHander += new EventHandler((o, e) =>
@@ -1137,6 +1148,270 @@ namespace PathOfWuxia
 
             }
             return hkb;
+        }
+
+        //十连抽
+        [HarmonyPrefix, HarmonyPatch(typeof(DialogControllerEx), "<MoveNext>g___MoveNext|35_0")]
+        public static bool DialogControllerEx_MoveNextPatch_tenGacha(DialogControllerEx __instance)
+        {
+            Console.WriteLine("DialogControllerEx_MoveNextPatch_tenGacha");
+            if (tenGacha.Value)
+            {
+                if (__instance.Current != null && __instance.Current.Id == "mi000000_0005" && !__instance.Current.NextTalk.Exists(x => x.Id == "mi000000_tenGacha_0001"))
+                {
+
+                    NpcTalkItem NpcTalkItem1 = new NpcTalkItem();
+                    NpcTalkItem1.Id = "mi000000_tenGacha_0001";
+                    NpcTalkItem1.NpcId = "Player";
+                    NpcTalkItem1.Content = "给我来十个。（八千钱）";
+                    NpcTalkItem1.Type = DialogType.Option;
+                    NpcTalkItem1.Emotion = MoodType.General;
+                    NpcTalkItem1.NextTalkId = new List<string>() { "mi000000_tenGacha_0002" };
+
+                    NpcTalkItem NpcTalkItem2 = new NpcTalkItem();
+                    NpcTalkItem2.Id = "mi000000_tenGacha_0002";
+                    NpcTalkItem2.NpcId = "Player";
+                    NpcTalkItem2.Content = "给我来十个。";
+                    NpcTalkItem2.Type = DialogType.Dialog;
+                    NpcTalkItem2.Emotion = MoodType.General;
+                    NpcTalkItem2.FailTalkId = "mi000000_tenGacha_0003";
+                    NpcTalkItem2.NextTalkId = new List<string>() { "mi000000_tenGacha_0004" };
+                    CheckMoney checkmoney1 = new CheckMoney();
+                    checkmoney1.op = Operator.GreaterThenOrEqual;
+                    checkmoney1.value = 8000;
+                    LogicalNode logicalNode1 = [checkmoney1];
+                    logicalNode1.op = LogicalOperator.And;
+                    NpcTalkItem2.Condition = new BaseFlowGraph();
+                    NpcTalkItem2.Condition.Output = logicalNode1;
+                    NpcTalkItem1.NextTalk.Add(NpcTalkItem2);
+
+                    NpcTalkItem NpcTalkItem3 = new NpcTalkItem();
+                    NpcTalkItem3.Id = "mi000000_tenGacha_0003";
+                    NpcTalkItem3.NpcId = "Player";
+                    NpcTalkItem3.Content = "给我来十个。";
+                    NpcTalkItem3.Type = DialogType.Dialog;
+                    NpcTalkItem3.Emotion = MoodType.General;
+                    NpcTalkItem3.NextTalkId = new List<string>() { "mi000000_0010" };
+                    NpcTalkItem3.NextTalk.Add(Game.Data.Get<NpcTalkItem>("mi000000_0010"));
+                    NpcTalkItem2.FailTalk = NpcTalkItem3;
+
+                    NpcTalkItem NpcTalkItem4 = new NpcTalkItem();
+                    NpcTalkItem4.Id = "mi000000_tenGacha_0004";
+                    NpcTalkItem4.NpcId = "WN010501005";
+                    NpcTalkItem4.Content = "好极了，好极了，诸位虽未必能满载而归，但必定不虚此行。";
+                    NpcTalkItem4.Type = DialogType.Dialog;
+                    NpcTalkItem4.Emotion = MoodType.General;
+                    NpcTalkItem4.NextTalkId = new List<string>() { "mi000000_tenGacha_0005" };
+                    NpcTalkItem2.NextTalk.Add(NpcTalkItem4);
+
+                    NpcTalkItem NpcTalkItem5 = new NpcTalkItem();
+                    NpcTalkItem5.Id = "mi000000_tenGacha_0005";
+                    NpcTalkItem5.NpcId = "Player";
+                    NpcTalkItem5.Content = "我知道了。";
+                    NpcTalkItem5.Type = DialogType.Dialog;
+                    NpcTalkItem5.Emotion = MoodType.General;
+
+                    RewardMoney RewardMoney = new RewardMoney();
+                    RewardMoney.method = Method.Sub;
+                    RewardMoney.value = 8000;
+
+                    RewardItem rewardItem2 = Game.Data.Get<RewardItem>("WN010501005");
+                    RandomRewardPack randomRewardPack = (RandomRewardPack)((LogicalNode)rewardItem2.Rewards.nodes[0]).inputListNode[0];
+
+                    LogicalNode logicalNode2 = [randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack, randomRewardPack];
+                    logicalNode2.op = LogicalOperator.And;
+
+                    RewardItem rewardItem = new RewardItem();
+                    rewardItem.Id = "WN010501005_tenGacha";
+                    rewardItem.IsShowMessage = true;
+                    rewardItem.Rewards = new BaseFlowGraph();
+                    rewardItem.Rewards.Output = logicalNode2;
+                    Game.Data.Add(rewardItem);
+
+                    RewardPack RewardPack1 = new RewardPack();
+                    RewardPack1.rewardId = "WN010501005_tenGacha";
+                    RewardPack1.isMessageRumor = false;
+                    RewardPack1.questType = false;
+                    RewardPack1.pathType = false;
+                    RewardPack1.typeId = "";
+
+                    MultiAction MultiAction = [RewardMoney, RewardPack1];
+                    NpcTalkItem5.SerialBehaviour = new BaseFlowGraph();
+                    NpcTalkItem5.SerialBehaviour.Output = MultiAction;
+                    NpcTalkItem4.NextTalk.Add(NpcTalkItem5);
+
+
+
+                    __instance.Current.NextTalk.Add(NpcTalkItem1);
+                }
+            }
+
+            return true;
+        }
+
+        //休息后恢复气血
+        [HarmonyPostfix, HarmonyPatch(typeof(UIBattleFinish), "Show")]
+        public static void UIBattleFinish_ShowPatch_restAfterBattle(UIBattleFinish __instance)
+        {
+            Console.WriteLine("UIBattleFinish_ShowPatch_restAfterBattle");
+            if (restAfterBattle.Value)
+            {
+                PartyCreationSystem system = Game.World.GetSystem<PartyCreationSystem>();
+                NpcDataSystem npcDataSystem = Game.World.GetSystem<NpcDataSystem>();
+                foreach (string id in system.Player.Members)
+                {
+                    AttributesComponent component2 = npcDataSystem[id].GetComponent<AttributesComponent>();
+
+                    Console.WriteLine(id);
+                    Console.WriteLine(component2.HP.Value);
+                    Console.WriteLine(component2.Max_HP.Value);
+                    Console.WriteLine(component2.MP.Value);
+                    Console.WriteLine(component2.Max_MP.Value);
+                    component2.HP.Value = component2.Max_HP.Value;
+                    component2.MP.Value = component2.Max_MP.Value;
+                    Console.WriteLine(component2.HP.Value);
+                    Console.WriteLine(component2.Max_HP.Value);
+                    Console.WriteLine(component2.MP.Value);
+                    Console.WriteLine(component2.Max_MP.Value);
+                }
+            }
+        }
+
+        static bool isTeleportOpen = false;
+
+        static string[,] teleportPart = {
+        {"Scene006","仁义庄"},
+        {"Scene000","洛阳"},
+        {"Scene012","杭州"},
+        {"Scene803","杏花村"},
+        {"Scene005","扬澜小镇"},
+        {"Scene031","龟山"},
+        {"Scene031_02","龟山山道"},
+        {"Scene102","少林寺"},
+        {"Scene105","孔雀山庄"},
+        {"Scene101","藏剑山庄"},
+        {"Scene802","大欢喜楼"},
+        {"Scene019","金钱帮"},
+        {"Scene034_h01","掷杯山庄"},
+        {"Scene011","梅花草堂"},
+        {"Scene800","八方客栈"},
+        {"Scene801","悦宾客栈"},
+        {"Scene024_g02","悦宾客栈外"},
+        {"Scene107","振威镖局"},
+        {"Scene106","镇远镖局"},
+        {"Scene029","白发故居"},
+        {"Scene008","百晓生故居"},
+        {"Scene009_h01","高立居"},
+        {"Scene033","江南朱家"},
+        {"Scene021_h01","恶人谷口"},
+        {"Scene022","恶人谷"},
+        {"Scene024","枫林瀑布"},
+        {"Scene014","狗窝"},
+        //{"Scene038_h01","回雁峰"},
+        {"Scene035_n01","饿虎岗"},
+        {"Scene018","天外天"},
+        {"Scene017_h01","幽灵洞"},
+        {"Scene020_h01","快活林"},
+        {"Scene013_h01","峨嵋山道"}
+        };
+        //传送-大地图开启
+        [HarmonyPostfix, HarmonyPatch(typeof(WorldMapStateMachine), "OnKeyDown")]
+        public static void WorldMapStateMachine_OnKeyDownPatch_teleport(WorldMapStateMachine __instance, ref Key key)
+        {
+            Console.WriteLine("WorldMapStateMachine_OnKeyDownPatch_teleport");
+            if (teleport.Value)
+            {
+                if (key == Key.BattleChangeTarget)
+                {
+                    UIManager UI = Traverse.Create(__instance).Property("UI").GetValue<UIManager>();
+
+                    createTeleportPanel(UI);
+                }
+            }
+        }
+        //传送-中地图开启
+        [HarmonyPostfix, HarmonyPatch(typeof(PlayerState), "OnKeyDown")]
+        public static void PlayerState_OnKeyDownPatch_teleport(PlayerState __instance, ref Key key)
+        {
+            Console.WriteLine("PlayerState_OnKeyDownPatch_teleport");
+            if (teleport.Value)
+            {
+                if (key == Key.BattleChangeTarget)
+                {
+                    UIManager UI = Traverse.Create(__instance).Property("UI").GetValue<UIManager>();
+
+                    createTeleportPanel(UI);
+                }
+            }
+        }
+        //传送-进入战斗时关闭面板
+        [HarmonyPostfix, HarmonyPatch(typeof(BattleStateMachine), "Initialize")]
+        public static void BattleStateMachine_InitializePatch_teleport(BattleStateMachine __instance)
+        {
+            Console.WriteLine("PlayerState_OnKeyDownPatch_teleport");
+            if (teleport.Value)
+            {
+                UIManager UI = Traverse.Create(__instance).Property("UI").GetValue<UIManager>();
+                Transform teleportScrollView = UI.Back.Find("Scroll View");
+                if (teleportScrollView != null)
+                {
+                    teleportScrollView.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        public static void createTeleportPanel(UIManager UI)
+        {
+
+            Transform teleportScrollView = UI.Back.Find("Scroll View");
+            if (teleportScrollView == null)
+            {
+                DefaultControls.Resources uiResources = new DefaultControls.Resources();
+
+                teleportScrollView = DefaultControls.CreateScrollView(uiResources).transform;
+                teleportScrollView.SetParent(UI.Back);
+                RectTransform rectTransform = teleportScrollView.GetComponent<RectTransform>();
+                rectTransform.sizeDelta = new Vector2(rectTransform.rect.width, Screen.height - 200);
+                teleportScrollView.localPosition = new Vector3(-Screen.width / 2 + 50, -50, 0);
+                ScrollRect rect = rectTransform.GetComponent<ScrollRect>();
+                rect.horizontal = false;
+                rect.scrollSensitivity = 20;
+
+                Transform content = teleportScrollView.Find("Viewport/Content");
+                VerticalLayoutGroup verticalLayoutGroup = content.gameObject.AddComponent<VerticalLayoutGroup>();
+                verticalLayoutGroup.spacing = 5;
+
+                Console.WriteLine(teleportPart.Length);
+                for (int i = 0; i < teleportPart.Length/2; i++)
+                {
+                    Console.WriteLine(teleportPart[i, 0]+","+ teleportPart[i, 1]);
+                    addButton(content, uiResources, teleportPart[i,0], teleportPart[i,1]);
+                }
+                rectTransform = content.GetComponent<RectTransform>();
+                rectTransform.sizeDelta = new Vector2(0, teleportPart.Length/2 * 50);
+
+            }
+            teleportScrollView.gameObject.SetActive(isTeleportOpen = !isTeleportOpen);
+        }
+
+        public static void addButton(Transform parent, DefaultControls.Resources uiResources, string mapId, string buttonText)
+        {
+            GameObject button = DefaultControls.CreateButton(uiResources);
+            Text ButtonText = button.GetComponentInChildren<Text>();
+            ButtonText.text = buttonText;
+            button.transform.SetParent(parent);
+            Text text = button.GetComponentInChildren<Text>();
+            //text.alignment = TextAnchor.MiddleLeft;
+
+            button.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(delegate ()
+            {
+                button.transform.parent.parent.parent.gameObject.SetActive(isTeleportOpen = false);
+                LoadingEventArgs e = new LoadingEventArgs
+                {
+                    MapId = mapId
+                };
+                Game.FSM.SendEvent("LOADING", e);
+            });
         }
     }
 }
