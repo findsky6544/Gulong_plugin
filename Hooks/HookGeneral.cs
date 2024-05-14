@@ -1558,7 +1558,7 @@ namespace PathOfWuxia
         }
 
 
-        //高亮司空摘星
+        //战斗显示名字
         [HarmonyPostfix, HarmonyPatch(typeof(BattleController), "Add")]
         public static void BattleController_AddPatch_battleShowName(BattleController __instance, ref BattleUnitSetting setting)
         {
@@ -1566,6 +1566,7 @@ namespace PathOfWuxia
             if (battleShowName.Value)
             {
                 Text nameText;
+                Console.WriteLine(setting.Npc.Id);
                 IEntity entity = __instance.entityDictionary[setting.Npc.Id];
                 WGBattleBarBillboard barBillboard = Game.BattleStateMachine.GetBarBillboard(entity);
                 if (barBillboard != null)
@@ -1579,7 +1580,8 @@ namespace PathOfWuxia
                             GameObject gameObject = new GameObject("nameText");
                             gameObject.transform.SetParent(hpBar, false);
                             nameText = gameObject.AddComponent<Text>();
-                            nameText.text = setting.Npc.FullName;
+
+                            Console.WriteLine(setting.Npc.FullName);
 
                             // 获得系统字体名称列表
                             string[] systemFontNames = Font.GetOSInstalledFontNames();
@@ -1592,13 +1594,14 @@ namespace PathOfWuxia
                             nameText.fontSize = 25;
                             nameText.fontStyle = FontStyle.Bold;
                             nameText.alignment = TextAnchor.MiddleRight;
-                            nameText.transform.localPosition = new Vector3(-510, -10, 0);
-                            nameText.rectTransform.sizeDelta = new Vector2(1000, 100);
                         }
                         else
                         {
                             nameText = trans.gameObject.GetComponent<Text>();
                         }
+                        nameText.text = setting.Npc.FullName;
+                        nameText.rectTransform.sizeDelta = new Vector2(nameText.text.Length * 24, 100);
+                        nameText.transform.localPosition = new Vector3(-30 * nameText.text.Length, -10, 0);
                         if (battleShowName.Value)
                         {
                             nameText.gameObject.SetActive(true);
@@ -1611,5 +1614,66 @@ namespace PathOfWuxia
                 }
             }
         }
+
+
+        /* [HarmonyPostfix, HarmonyPatch(typeof(BattleStateMachine), "AddPreviewBillBoard")]
+         public static void BattleStateMachine_AddPreviewBillBoardPatch_battleShowName(BattleStateMachine __instance,ref IEntity entity)
+         {
+             Console.WriteLine("BattleStateMachine_AddPreviewBillBoardPatch_battleShowName");
+             if (battleShowName.Value)
+             {
+                 Text nameText;
+                 //Console.WriteLine(setting.Npc.Id);
+                 BattleController Controller = Traverse.Create(__instance).Property("Controller").GetValue<BattleController>();
+                 IEntityCollection battleCollection = Traverse.Create(Controller).Property("battleCollection").GetValue<IEntityCollection>();
+                 Dictionary<IEntity, int> billboardMapping = Traverse.Create(__instance).Property("billboardMapping").GetValue<Dictionary<IEntity, int>>();
+                 IEntity priviewEntity = battleCollection.GetEntity(billboardMapping[entity]);
+                 BattleUnit unit = entity.GetComponent<BattleUnit>();
+                 WGBattleBarBillboard barBillboard = Game.BattleStateMachine.GetBarBillboard(priviewEntity);
+                 if (barBillboard != null)
+                 {
+                     RectTransform hpBar = Traverse.Create(barBillboard).Field("hpBar").GetValue<RectTransform>();
+                     if (hpBar != null)
+                     {
+                         var trans = hpBar.Find("nameText");
+                         if (trans == null)
+                         {
+                             GameObject gameObject = new GameObject("nameText");
+                             gameObject.transform.SetParent(hpBar, false);
+                             nameText = gameObject.AddComponent<Text>();
+
+                             Console.WriteLine(unit.Npc.FullName);
+
+                             // 获得系统字体名称列表
+                             string[] systemFontNames = Font.GetOSInstalledFontNames();
+                             // 获得某种字体
+                             int index = 0;
+                             string systemFontName = systemFontNames[index];
+                             Font font = Font.CreateDynamicFontFromOSFont(systemFontName, 36);
+
+                             nameText.font = font;
+                             nameText.fontSize = 25;
+                             nameText.fontStyle = FontStyle.Bold;
+                             nameText.alignment = TextAnchor.MiddleRight;
+                         }
+                         else
+                         {
+                             nameText = trans.gameObject.GetComponent<Text>();
+                         }
+                         nameText.text = unit.Npc.FullName;
+                         nameText.rectTransform.sizeDelta = new Vector2(nameText.text.Length * 24, 100);
+                         nameText.transform.localPosition = new Vector3(-30* nameText.text.Length, -10, 0);
+                         if (battleShowName.Value)
+                         {
+                             nameText.gameObject.SetActive(true);
+                         }
+                         else
+                         {
+                             nameText.gameObject.SetActive(false);
+                         }
+                     }
+                 }
+             }
+         }*/
     }
 }
