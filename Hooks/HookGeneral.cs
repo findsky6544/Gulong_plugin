@@ -30,7 +30,9 @@ using System.Linq;
 using UniRx;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
 using UnityEngine.Rendering.VirtualTexturing;
+using UnityEngine.TextCore;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using Move = Heluo.FSM.Player.Move;
@@ -64,36 +66,41 @@ namespace PathOfWuxia
         static ConfigEntry<bool> showPointContent;
         static ConfigEntry<bool> showStayTrigger;
         static ConfigEntry<bool> showSikong;
-        static ConfigEntry<bool> skipBattleAnime;
         static ConfigEntry<bool> autoHarvest;
         static ConfigEntry<bool> tenGacha;
         static ConfigEntry<bool> restAfterBattle;
         static ConfigEntry<bool> teleport;
+        static ConfigEntry<bool> battleShowName;
 
         static bool speedOn = false;
         public void OnRegister(GulongPlugin plugin)
         {
             learnSkillNotEatBook = plugin.Config.Bind("游戏设定", "学技能不吃书", false, "学技能后技能书不消失");
-            allMemberGetExp = plugin.Config.Bind("战斗设定", "所有角色获得经验", false, "战斗后所有角色都可获得经验");
-            maxBattleAvatar = plugin.Config.Bind("战斗设定", "最大上阵人数", -1, "修改最大上阵人数,-1为禁用");
-            onePunch = plugin.Config.Bind("战斗设定", "一击99999999", false, "不破锁血等，道具无效");
             gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度，按速度热键开启");
             speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "游戏速度启用/关闭");
             playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度，默认为6");
+            playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
+            playerName = plugin.Config.Bind("游戏设定", "主角名", "雨", "修改主角名");
+            addskillColumnNum = plugin.Config.Bind("游戏设定", "增加技能栏位数", 0, "每人最多6个栏位，多了无效");
+            autoHarvest = plugin.Config.Bind("游戏设定", "自动采集资源", false, "靠近大地图资源后自动采集");
+            tenGacha = plugin.Config.Bind("游戏设定", "珍藏浪客十连抽", false, "珍藏浪客十连抽");
+            teleport = plugin.Config.Bind("游戏设定", "快速传送", false, "按Tab键开启/关闭。请勿随意传送至未开启的地图，可能会有奇怪的bug");
+
+            allMemberGetExp = plugin.Config.Bind("战斗设定", "所有角色获得经验", false, "战斗后所有角色都可获得经验");
+            maxBattleAvatar = plugin.Config.Bind("战斗设定", "最大上阵人数", -1, "修改最大上阵人数,-1为禁用");
+            onePunch = plugin.Config.Bind("战斗设定", "一击99999999", false, "不破锁血等，道具无效");
+            autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
+            restAfterBattle = plugin.Config.Bind("战斗设定", "战斗后自动回满气血内力", false, "战斗后自动回满气血内力");
+
             unlimitRadarRange = plugin.Config.Bind("UI增强", "无限距追踪", false, "大地图上的npc无论多远都显示追踪图标，但不会自动消失。可能会引起卡顿。如果关闭后图标不消失可SL解决");
             ShowRepluseTick = plugin.Config.Bind("UI增强", "显示时序数值", false, "战斗中显示时序数值");
             showGiftFavorite = plugin.Config.Bind("UI增强", "显示礼物喜爱度", false, "显示礼物喜爱度");
             showPointContent = plugin.Config.Bind("UI增强", "显示采集点内容", false, "显示采集点内容");
-            playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
-            playerName = plugin.Config.Bind("游戏设定", "主角名", "雨", "修改主角名");
-            addskillColumnNum = plugin.Config.Bind("游戏设定", "增加技能栏位数", 0, "每人最多6个栏位，多了无效");
             TriggerPointAlwaysShow = plugin.Config.Bind("UI增强", "互动点常亮", false, "大地图采集点、奇人、中地图调查点、角色等。可能会引起卡顿");
             TriggerPointAlwaysShowDistance = plugin.Config.Bind("UI增强", "互动点常亮距离", 50, "距离以外的互动点不亮,默认50，太小可能会出bug");
-            autoBattle = plugin.Config.Bind("战斗设定", "自动战斗", false, "注 意 智 障 A I");
-            autoHarvest = plugin.Config.Bind("游戏设定", "自动采集资源", false, "靠近大地图资源后自动采集");
-            tenGacha = plugin.Config.Bind("游戏设定", "珍藏浪客十连抽", false, "珍藏浪客十连抽");
-            restAfterBattle = plugin.Config.Bind("战斗设定", "战斗后自动回满气血内力", false, "战斗后自动回满气血内力");
-            teleport = plugin.Config.Bind("游戏设定", "快速传送", false, "按Tab键开启/关闭。可能会有奇怪的bug");
+            showSikong = plugin.Config.Bind("UI增强", "提示司空摘星", false, "战斗中提示司空摘星伪装的杂兵");
+            showStayTrigger = plugin.Config.Bind("UI增强", "高亮停留触发区域", false, "捡蛋以及其他触发区域");
+            battleShowName = plugin.Config.Bind("UI增强", "战斗显示名字", false, "战斗显示名字");
             plugin.onUpdate += OnUpdate;
 
             ReplacePlayerAvatarEventHander += new EventHandler((o, e) =>
@@ -771,6 +778,7 @@ namespace PathOfWuxia
             }
             newName2 = newName2.Substring(newName2.Length - 1);
             content = content.Replace("辰！雨", newName2);
+            content = content.Replace("辰公子", playerSurname.Value + "公子");
 
             return content;
         }
@@ -1312,7 +1320,8 @@ namespace PathOfWuxia
         {"Scene018","天外天"},
         {"Scene017_h01","幽灵洞"},
         {"Scene020_h01","快活林"},
-        {"Scene013_h01","峨嵋山道"}
+        {"Scene013_h01","峨嵋山道"},
+        {"Scene027_g01","荒郊雪岭"}
         };
         //传送-大地图开启
         [HarmonyPostfix, HarmonyPatch(typeof(WorldMapStateMachine), "OnKeyDown")]
@@ -1382,13 +1391,13 @@ namespace PathOfWuxia
                 verticalLayoutGroup.spacing = 5;
 
                 Console.WriteLine(teleportPart.Length);
-                for (int i = 0; i < teleportPart.Length/2; i++)
+                for (int i = 0; i < teleportPart.Length / 2; i++)
                 {
-                    Console.WriteLine(teleportPart[i, 0]+","+ teleportPart[i, 1]);
-                    addButton(content, uiResources, teleportPart[i,0], teleportPart[i,1]);
+                    Console.WriteLine(teleportPart[i, 0] + "," + teleportPart[i, 1]);
+                    addButton(content, uiResources, teleportPart[i, 0], teleportPart[i, 1]);
                 }
                 rectTransform = content.GetComponent<RectTransform>();
-                rectTransform.sizeDelta = new Vector2(0, teleportPart.Length/2 * 50);
+                rectTransform.sizeDelta = new Vector2(0, teleportPart.Length / 2 * 50);
 
             }
             teleportScrollView.gameObject.SetActive(isTeleportOpen = !isTeleportOpen);
@@ -1412,6 +1421,195 @@ namespace PathOfWuxia
                 };
                 Game.FSM.SendEvent("LOADING", e);
             });
+        }
+
+        //高亮停留触发区域
+        [HarmonyPostfix, HarmonyPatch(typeof(EventCubeMouseEventSystem), "Setup")]
+        public static void EventCubeMouseEventSystem_SetupPatch_showStayTrigger(EventCubeMouseEventSystem __instance, ref IEntity entity)
+        {
+            Console.WriteLine("EventCubeMouseEventSystem_SetupPatch_showStayTrigger");
+            if (showStayTrigger.Value)
+            {
+                GameObject gameObject = entity.GetGameObject();
+                if (gameObject == null)
+                {
+                    return;
+                }
+                EventCubeComponent component = entity.GetComponent<EventCubeComponent>();
+                EventCubeItem item = component.Item;
+                if (!(item.Condition == null || item.Condition.Output == null || item.Condition.GetValue<bool>(null)))
+                {
+                    return;
+                }
+                if (item.TriggerType == EventCubeTriggerType.Stay)
+                {
+                    Console.WriteLine(gameObject.name);
+
+                    item.Name = item.Description + "(停留" + item.StayTime + "秒)";
+                    if (entity != null && !entity.HasComponent<TargetBillboardComponent>())
+                    {
+                        TargetBillboardComponent tbComponent = new TargetBillboardComponent
+                        {
+                            Data = entity
+                        };
+                        entity.AddComponent(tbComponent);
+                    }
+
+                    gameObject.GetComponent<MeshRenderer>().enabled = true;
+                    GameObject hkb = getHotkeyBase(entity);
+                    if (hkb != null)
+                    {
+                        hkb.SetActive(false);
+                    }
+                }
+            }
+        }
+
+        [HarmonyPrefix, HarmonyPatch(typeof(EventCubeMouseEventSystem), "OnMouseExit")]
+        public static bool EventCubeMouseEventSystem_OnMouseExitPatch_showStayTrigger(EventCubeMouseEventSystem __instance, ref IEntity entity)
+        {
+            Console.WriteLine("EventCubeMouseEventSystem_OnMouseExitPatch_showStayTrigger");
+            if (showStayTrigger.Value)
+            {
+                GameObject gameObject = entity.GetGameObject();
+                if (gameObject == null)
+                {
+                    return true;
+                }
+                EventCubeComponent component = entity.GetComponent<EventCubeComponent>();
+                EventCubeItem item = component.Item;
+                if (!(item.Condition == null || item.Condition.Output == null || item.Condition.GetValue<bool>(null)))
+                {
+                    return true;
+                }
+                if (item.TriggerType == EventCubeTriggerType.Stay)
+                {
+                    GameCursor cursor = Traverse.Create(__instance).Field("cursor").GetValue<GameCursor>();
+                    cursor.Reset();
+                    return false;
+                }
+            }
+            return true;
+        }
+
+
+        //
+        public static string[] sikongId = { "nq0020_09", "na0028_02", "na0028_03", "na0028_04" };
+
+
+
+        //高亮司空摘星
+        [HarmonyPostfix, HarmonyPatch(typeof(BattleController), "Add")]
+        public static void BattleController_AddPatch_showSikong(BattleController __instance, ref BattleUnitSetting setting)
+        {
+            Console.WriteLine("BattleController_AddPatch_showSikong");
+            if (showSikong.Value)
+            {
+                if (sikongId.Contains(setting.Npc.Id))
+                {
+                    Text tipText;
+                    IEntity entity = __instance.entityDictionary[setting.Npc.Id];
+                    WGBattleBarBillboard barBillboard = Game.BattleStateMachine.GetBarBillboard(entity);
+                    if (barBillboard != null)
+                    {
+                        RectTransform hpBar = Traverse.Create(barBillboard).Field("hpBar").GetValue<RectTransform>();
+                        if (hpBar != null)
+                        {
+                            var trans = hpBar.Find("tipText");
+                            if (trans == null)
+                            {
+                                GameObject gameObject = new GameObject("tipText");
+                                gameObject.transform.SetParent(hpBar, false);
+                                tipText = gameObject.AddComponent<Text>();
+                                tipText.text = "这个是\n司空摘星";
+
+                                // 获得系统字体名称列表
+                                string[] systemFontNames = Font.GetOSInstalledFontNames();
+                                // 获得某种字体
+                                int index = 0;
+                                string systemFontName = systemFontNames[index];
+                                Font font = Font.CreateDynamicFontFromOSFont(systemFontName, 36);
+
+                                tipText.font = font;
+                                tipText.fontSize = 25;
+                                tipText.fontStyle = FontStyle.Bold;
+                                tipText.alignment = TextAnchor.MiddleCenter;
+                                tipText.transform.localPosition = new Vector3(50, -150, 0);
+                            }
+                            else
+                            {
+                                tipText = trans.gameObject.GetComponent<Text>();
+                            }
+                            if (showSikong.Value)
+                            {
+                                tipText.gameObject.SetActive(true);
+                            }
+                            else
+                            {
+                                tipText.gameObject.SetActive(false);
+                            }
+                        }
+                    }
+
+
+
+                }
+            }
+        }
+
+
+        //高亮司空摘星
+        [HarmonyPostfix, HarmonyPatch(typeof(BattleController), "Add")]
+        public static void BattleController_AddPatch_battleShowName(BattleController __instance, ref BattleUnitSetting setting)
+        {
+            Console.WriteLine("BattleController_AddPatch_battleShowName");
+            if (battleShowName.Value)
+            {
+                Text nameText;
+                IEntity entity = __instance.entityDictionary[setting.Npc.Id];
+                WGBattleBarBillboard barBillboard = Game.BattleStateMachine.GetBarBillboard(entity);
+                if (barBillboard != null)
+                {
+                    RectTransform hpBar = Traverse.Create(barBillboard).Field("hpBar").GetValue<RectTransform>();
+                    if (hpBar != null)
+                    {
+                        var trans = hpBar.Find("nameText");
+                        if (trans == null)
+                        {
+                            GameObject gameObject = new GameObject("nameText");
+                            gameObject.transform.SetParent(hpBar, false);
+                            nameText = gameObject.AddComponent<Text>();
+                            nameText.text = setting.Npc.FullName;
+
+                            // 获得系统字体名称列表
+                            string[] systemFontNames = Font.GetOSInstalledFontNames();
+                            // 获得某种字体
+                            int index = 0;
+                            string systemFontName = systemFontNames[index];
+                            Font font = Font.CreateDynamicFontFromOSFont(systemFontName, 36);
+
+                            nameText.font = font;
+                            nameText.fontSize = 25;
+                            nameText.fontStyle = FontStyle.Bold;
+                            nameText.alignment = TextAnchor.MiddleRight;
+                            nameText.transform.localPosition = new Vector3(-510, -10, 0);
+                            nameText.rectTransform.sizeDelta = new Vector2(1000, 100);
+                        }
+                        else
+                        {
+                            nameText = trans.gameObject.GetComponent<Text>();
+                        }
+                        if (battleShowName.Value)
+                        {
+                            nameText.gameObject.SetActive(true);
+                        }
+                        else
+                        {
+                            nameText.gameObject.SetActive(false);
+                        }
+                    }
+                }
+            }
         }
     }
 }

@@ -68,3 +68,7 @@ D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\net
 D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\Unity.Collections.LowLevel.ILSupport.dll
 D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\EcsRx.dll
 D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\EcsRx.Infrastructure.dll
+D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\AmplifyOcclusion.dll
+D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\AmplifyBloom.dll
+D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\Beautify.dll
+D:\其他\游戏相关\古龙风云录\Gulong_plugin\Gulong_plugin\bin\Debug\netstandard2.0\SEScreenSpaceShadows.dll
