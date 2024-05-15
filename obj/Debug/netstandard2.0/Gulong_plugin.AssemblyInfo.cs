@@ -14,11 +14,11 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Gulong_plugin")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyDescriptionAttribute("My first plugin")]
-[assembly: System.Reflection.AssemblyFileVersionAttribute("1.8.4.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.8.4")]
+[assembly: System.Reflection.AssemblyFileVersionAttribute("1.8.5.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.8.5")]
 [assembly: System.Reflection.AssemblyProductAttribute("古龙风云录插件 by 寻宇")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Gulong_plugin")]
-[assembly: System.Reflection.AssemblyVersionAttribute("1.8.4.0")]
+[assembly: System.Reflection.AssemblyVersionAttribute("1.8.5.0")]
 
 // 由 MSBuild WriteCodeFragment 类生成。
 

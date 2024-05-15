@@ -76,7 +76,7 @@ namespace PathOfWuxia
         public void OnRegister(GulongPlugin plugin)
         {
             learnSkillNotEatBook = plugin.Config.Bind("游戏设定", "学技能不吃书", false, "学技能后技能书不消失");
-            gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度，按速度热键开启");
+            gameSpeed = plugin.Config.Bind("游戏设定", "游戏速度", 2.0f, "修改游戏速度，按速度热键F2开启");
             speedKey = plugin.Config.Bind("游戏设定", "速度热键", KeyCode.F2, "游戏速度启用/关闭");
             playerMoveSpeed = plugin.Config.Bind("游戏设定", "角色移动速度", 6f, "修改角色移动速度，默认为6");
             playerSurname = plugin.Config.Bind("游戏设定", "主角姓", "辰", "修改主角姓");
@@ -1381,7 +1381,7 @@ namespace PathOfWuxia
                 teleportScrollView.SetParent(UI.Back);
                 RectTransform rectTransform = teleportScrollView.GetComponent<RectTransform>();
                 rectTransform.sizeDelta = new Vector2(rectTransform.rect.width, Screen.height - 200);
-                teleportScrollView.localPosition = new Vector3(-Screen.width / 2 + 50, -50, 0);
+                teleportScrollView.localPosition = new Vector3(-850, -50, 0);
                 ScrollRect rect = rectTransform.GetComponent<ScrollRect>();
                 rect.horizontal = false;
                 rect.scrollSensitivity = 20;
