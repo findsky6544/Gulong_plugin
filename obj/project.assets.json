@@ -2835,7 +2835,7 @@
     "D:\\软件\\安装\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
   },
   "project": {
-    "version": "1.8.2",
+    "version": "1.8.4",
     "restore": {
       "projectUniqueName": "D:\\其他\\游戏相关\\古龙风云录\\Gulong_plugin\\Gulong_plugin\\Gulong_plugin.csproj",
       "projectName": "Gulong_plugin",
@@ -2912,7 +2912,7 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.408\\RuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\7.0.409\\RuntimeIdentifierGraph.json"
       }
     }
   }
