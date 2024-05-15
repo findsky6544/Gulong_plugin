@@ -44,9 +44,14 @@
 
 18.快速传送
 
+19.提示司空摘星
 
-![QQ截图20240209160413](https://github.com/findsky6544/Gulong_plugin/assets/36687288/39398df6-64e5-4a6a-bf8e-e825f885229f)
-![QQ截图20240209160713](https://github.com/findsky6544/Gulong_plugin/assets/36687288/ca00be58-9376-42a9-bf50-ce3ad0ac386f)
-![QQ截图20240209160615](https://github.com/findsky6544/Gulong_plugin/assets/36687288/713298b4-80e4-4da4-8ec6-af5012d5ea56)
-![QQ截图20240209160524](https://github.com/findsky6544/Gulong_plugin/assets/36687288/41dd59f1-c739-4ce0-a96b-84af2be174af)
+20.高亮停留触发区域
+
+21.战斗中显示名字
+
+
+![QQ截图20240515205303](https://github.com/findsky6544/Gulong_plugin/assets/36687288/d587f906-6a88-446e-95f6-779a6ef8f292)
+![QQ截图20240515213903](https://github.com/findsky6544/Gulong_plugin/assets/36687288/3cefe23d-4749-421f-90b8-0546f7a5e537)
+![QQ截图20240515003139](https://github.com/findsky6544/Gulong_plugin/assets/36687288/92da26c1-1da9-48a2-b247-78bf02939d64)
 ![QQ截图20240505012659](https://github.com/findsky6544/Gulong_plugin/assets/36687288/1ce6e1e9-40c8-499f-8c86-b7449f63ff7f)
