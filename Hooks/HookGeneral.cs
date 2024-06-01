@@ -1100,14 +1100,14 @@ namespace PathOfWuxia
                 if (entity != null && entity.HasComponent(out harvestComponent))
                 {
                     WorldMapStateMachine worldMapStateMachine = Game.FSM.GetComponent<WorldMapStateMachine>();
-                    IReusableEventSystem EventSystem = Traverse.Create(worldMapStateMachine).Property("EventSystem").GetValue<IReusableEventSystem>();
-                    EventSystem.Publish<HarvestEventArgs>(delegate (HarvestEventArgs x)
-                    {
-                        x.Target = entity;
-                    });
+                        IReusableEventSystem EventSystem = Traverse.Create(worldMapStateMachine).Property("EventSystem").GetValue<IReusableEventSystem>();
+                        EventSystem.Publish<HarvestEventArgs>(delegate (HarvestEventArgs x)
+                        {
+                            x.Target = entity;
+                        });
+                    return false;
                 }
 
-                return false;
             }
             return true;
         }
