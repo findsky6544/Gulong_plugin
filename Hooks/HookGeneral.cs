@@ -768,7 +768,7 @@ namespace PathOfWuxia
             {
                 newName2 += newName[i] + "、";
             }
-            newName2 = newName2.Substring(newName2.Length - 1);
+            newName2 = newName2.Substring(0,newName2.Length - 1);
             content = content.Replace("辰、雨", newName2);
 
             newName2 = "";
@@ -776,7 +776,7 @@ namespace PathOfWuxia
             {
                 newName2 += newName[i] + "！";
             }
-            newName2 = newName2.Substring(newName2.Length - 1);
+            newName2 = newName2.Substring(0,newName2.Length - 1);
             content = content.Replace("辰！雨", newName2);
             content = content.Replace("辰公子", playerSurname.Value + "公子");
 
